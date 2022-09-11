@@ -1,0 +1,12 @@
+* nesoi
+A personal napari distribution
+
+** emacs
+
+#+BEGIN_SRC elisp :async
+
+(let ((python-shell-buffer-name "nesoi"))  
+  (pyvenv-workon "nesoi")
+  (process-name (run-python)))
+
+#+END_SRC

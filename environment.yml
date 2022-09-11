@@ -1,0 +1,48 @@
+name: nesoi
+channels:
+- conda-forge
+
+dependencies:
+- python=3.9  
+- cmake
+- pybind11
+- pip
+- boost-cpp
+- mpfr
+- gmp
+- cgal
+- python>=3.6
+- numpy
+- scipy
+- matplotlib
+- pandas
+- pytables
+- jupyter
+- notebook
+- quantities
+- ipywidgets
+- pythreejs
+- ipyvolume
+- vispy
+- meshio
+- zarr
+- xarray
+- ipywidgets
+- hdf5
+- mpfr
+- gmp
+- pyvista
+- pyqt
+- omero-py
+- pyimagej
+- openjdk=8
+- jupyterlab
+- pip:
+    - s3fs
+    - pooch
+    - qtpy
+    - superqt
+    - yappi
+    - triangle
+    - idr-py
+    - album

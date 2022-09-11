@@ -1,0 +1,35 @@
+#!/bin/bash
+
+mamba env remove -n nesoi
+
+mamba env create -y -f environment.yml
+source ~/miniconda3/bin/activate nesoi
+
+cd repos
+
+# ===== Setup napari =====
+# git clone https://github.com/andy-sweet/napari
+git clone https://github.com/napari/napari
+# cd napari
+# git checkout async-slice-proto
+# cd ..
+pip install -e ./napari
+
+# ===== Setup napari-omero =====
+git clone https://github.com/tlambert03/napari-omero.git
+pip install -e ./napari-omero
+
+# ===== Setup napari-animation =====
+git clone https://github.com/napari/napari-animation.git
+pip install -e ./napari-animation
+
+# ===== Setup tyssue =====
+jupyter nbextension install --sys-prefix --py pythreejs
+jupyter nbextension enable --sys-prefix --py pythreejs
+jupyter nbextension enable --py widgetsnbextension
+
+git clone --recursive https://github.com/DamCB/tyssue
+pip install -e ./tyssue
+
+git clone https://github.com/DamCB/tyssue-demo
+git clone https://github.com/DamCB/tyssue-notebooks
