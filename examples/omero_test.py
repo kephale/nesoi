@@ -46,7 +46,8 @@ data = load_numpy_array(image)
 
 print('data loaded', data.shape)
 
+viewer.add_image(data)
 
-# if __name__ == '__main__':
-#     napari.run()
+if __name__ == '__main__':
+    napari.run()
 
