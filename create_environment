@@ -2,17 +2,17 @@
 
 mamba env remove -n nesoi
 
-mamba env create -y -f environment.yml
+mamba env create -f environment.yml
 source ~/miniconda3/bin/activate nesoi
 
 cd repos
 
 # ===== Setup napari =====
-# git clone https://github.com/andy-sweet/napari
-git clone https://github.com/napari/napari
-# cd napari
-# git checkout async-slice-proto
-# cd ..
+git clone https://github.com/andy-sweet/napari
+# git clone https://github.com/napari/napari
+cd napari
+git checkout async-slice-proto
+cd ..
 pip install -e ./napari
 
 # ===== Setup napari-omero =====
