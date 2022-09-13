@@ -113,6 +113,9 @@ def get_omero_metadata(image: ImageWrapper) -> Dict:
 def get_data_lazy(image: ImageWrapper) -> da.Array:
     """Get 5D dask array, with delayed reading from OMERO image."""
     nt, nc, nz, ny, nx = [getattr(image, f'getSize{x}')() for x in 'TCZYX']
+
+    # print('get_data_lazy', [nt, nc, nz, ny, nx])
+    
     pixels = image.getPrimaryPixels()
     dtype = PIXEL_TYPES.get(pixels.getPixelsType().value, None)
     get_plane = delayed(lambda idx: pixels.getPlane(*idx))
@@ -120,6 +123,8 @@ def get_data_lazy(image: ImageWrapper) -> da.Array:
     def get_lazy_plane(zct):
         return da.from_delayed(get_plane(zct), shape=(ny, nx), dtype=dtype)
 
+    # print('example plane ()', get_plane((0, 0, 0)).compute())
+    
     # 5D stack: TCZXY
     t_stacks = []
     for t in range(nt):

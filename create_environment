@@ -17,11 +17,11 @@ pip install -e ./napari
 
 # ===== Setup napari-omero =====
 git clone https://github.com/tlambert03/napari-omero.git
-pip install -e ./napari-omero
+pip install --no-deps -e ./napari-omero
 
 # ===== Setup napari-animation =====
 git clone https://github.com/napari/napari-animation.git
-pip install -e ./napari-animation
+pip install --no-deps -e ./napari-animation
 
 # ===== Setup tyssue =====
 jupyter nbextension install --sys-prefix --py pythreejs
@@ -29,7 +29,7 @@ jupyter nbextension enable --sys-prefix --py pythreejs
 jupyter nbextension enable --py widgetsnbextension
 
 git clone --recursive https://github.com/DamCB/tyssue
-pip install -e ./tyssue
+pip install --no-deps -e ./tyssue
 
 git clone https://github.com/DamCB/tyssue-demo
 git clone https://github.com/DamCB/tyssue-notebooks

@@ -46,3 +46,6 @@ dependencies:
     - triangle
     - idr-py
     - album
+    - omero-rois
+    - imageio-ffmpeg
+    

@@ -10,3 +10,7 @@ A personal napari distribution
   (process-name (run-python)))
 
 #+END_SRC
+
+#+RESULTS:
+: nesoi
+
