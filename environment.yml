@@ -1,7 +1,8 @@
 name: nesoi
 channels:
+- pytorch-nightly
 - conda-forge
-
+channel_priority: flexible  # or 'strict'
 dependencies:
 - python=3.9  
 - cmake
@@ -37,6 +38,12 @@ dependencies:
 - pyimagej
 - openjdk=8
 - jupyterlab
+- pytorch
+- torchvision
+- diffusers
+- einops
+- fire
+- pillow
 - pip:
     - s3fs
     - pooch
@@ -48,4 +55,15 @@ dependencies:
     - album
     - omero-rois
     - imageio-ffmpeg
-    
+    - transformers
+    - ftfy
+    - gradio
+    - imaris-ims-file-reader
+    - tqdm
+    - scanpy
+    - pyarrow
+    - imagecodecs
+    - squidpy
+    - imageio
+    - h5py
+    - tifffile
