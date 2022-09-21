@@ -33,6 +33,10 @@ pip install --no-deps -e ./napari-imaris-loader
 git clone https://github.com/leoguignard/napari-turing
 pip install --no-deps -e ./napari-turing
 
+# ===== Setup napari-stable-diffusion =====
+git clone git@github.com:kephale/napari-stable-diffusion.git
+pip install --no-deps -e ./napari-stable-diffusion
+
 # ===== Setup tyssue =====
 jupyter nbextension install --sys-prefix --py pythreejs
 jupyter nbextension enable --sys-prefix --py pythreejs
