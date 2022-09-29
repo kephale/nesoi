@@ -1,0 +1,26 @@
+name: cj_mei
+channels:
+- conda-forge
+dependencies:
+- python=3.9  
+- pip
+- numpy
+- scipy
+- matplotlib
+- pandas
+- vispy
+- pyqt
+- pillow
+- dask
+- pyclesperanto-prototype
+- tensorflow
+- pyqt
+- pip:
+    - tifffile
+    - scikit-image
+    - scikit-learn
+    - stardist
+    - stardist-napari
+    - pyopencl
+    - opencv-python
+    - git+https://github.com/napari/napari
