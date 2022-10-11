@@ -47,3 +47,7 @@ pip install --no-deps -e ./tyssue
 
 git clone https://github.com/DamCB/tyssue-demo
 git clone https://github.com/DamCB/tyssue-notebooks
+
+# ===== Setup napari-tyssue =====
+git clone git@github.com:kephale/napari-tyssue.git
+pip install --no-deps -e ./napari-tyssue

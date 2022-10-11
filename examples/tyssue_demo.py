@@ -8,7 +8,6 @@ from tyssue.generation import three_faces_sheet
 # This is from https://github.com/DamCB/tyssue/blob/d5da9a47fcf9f027ed9daabc3fa6cccaaa3a6d86/tests/draw/test_vispy.py
 
 def view():
-
     sheet = Sheet("test", *three_faces_sheet())
     SheetGeometry.update_all(sheet)
     face_spec = {
