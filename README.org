@@ -1,5 +1,6 @@
 * nesoi
-A personal napari distribution
+
+A personal napari distribution by Kyle Harrington
 
 ** emacs
 
