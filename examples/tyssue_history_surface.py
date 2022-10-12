@@ -174,13 +174,11 @@ def browse_history(
 specs_kw = {}
 draw_specs = sheet_spec()
 spec_updater(draw_specs, specs_kw)
-sheet = history.retrieve(0)
-
 coords = ["x", "y", "z"]
 
+sheet = history.retrieve(0)
 meshes = _get_meshes(sheet, coords, draw_specs)
 mesh = meshes[0]
-
 print(f"mesh: ({mesh[0].shape}, {mesh[1].shape}, {mesh[2].shape})")
 
 # napari stuff
@@ -188,7 +186,30 @@ print(f"mesh: ({mesh[0].shape}, {mesh[1].shape}, {mesh[2].shape})")
 viewer = napari.Viewer()
 viewer.dims.ndisplay = 3
 
-viewer.add_surface(mesh, colormap='turbo', opacity=0.9, contrast_limits=[0, 1], name='tyssue')
+surface = viewer.add_surface(mesh, colormap='turbo', opacity=0.9, contrast_limits=[0, 1], name='tyssue')
 
+def updater():
+    import time
+
+    print('starting to sleep for 10')
+    time.sleep(10)
+    print('done sleeping')
+    time.sleep(1)
+    
+    for t in range(len(history)):
+        print(f"Time {t}")
+        sheet = history.retrieve(t)
+        meshes = _get_meshes(sheet, coords, draw_specs)
+        mesh = meshes[0]
+        print(f"mesh: ({mesh[0].shape}, {mesh[1].shape}, {mesh[2].shape})")
+
+        surface.data = mesh
+        time.sleep(0.5)
+
+from threading import Thread
+
+thread = Thread(target=updater)
+thread.start()
+        
 # fig, mesh = view_sheet(sheet, coords=['z', 'x', 'y'], mode="3D", interactive=True)
 # fig

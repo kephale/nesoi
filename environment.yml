@@ -67,3 +67,5 @@ dependencies:
     - imageio
     - h5py
     - tifffile
+    - nilearn
+    - flake8
