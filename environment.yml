@@ -69,3 +69,7 @@ dependencies:
     - tifffile
     - nilearn
     - flake8
+    - git+https://github.com/DamCB/invagination.git
+    - pytest
+    - pytest-qt
+    - pytest-cov
