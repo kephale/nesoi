@@ -36,6 +36,8 @@ dependencies:
 - pyqt
 - omero-py
 - pyimagej
+- pyopencl
+- reikna
 - openjdk=8
 - jupyterlab
 - pytorch
@@ -69,7 +71,7 @@ dependencies:
     - tifffile
     - nilearn
     - flake8
-    - git+https://github.com/DamCB/invagination.git
+    - invagination
     - pytest
     - pytest-qt
     - pytest-cov

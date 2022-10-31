@@ -8,12 +8,14 @@ source ~/miniconda3/bin/activate nesoi
 cd repos
 
 # ===== Setup napari =====
-git clone https://github.com/andy-sweet/napari
+git clone https://github.com/kephale/napari
+# git clone https://github.com/andy-sweet/napari
 # git clone https://github.com/napari/napari
 cd napari
 git remote add upstream git@github.com:napari/napari.git
+git remote add andy-sweet git@github.com:andy-sweet/napari.git
 git remote add kephale git@github.com:kephale/napari.git
-git checkout async-slice-proto
+git checkout -b async-slice-proto --track andy-sweet/async-slice-proto
 cd ..
 pip install -e ./napari
 
@@ -51,3 +53,23 @@ git clone https://github.com/DamCB/tyssue-notebooks
 # ===== Setup napari-tyssue =====
 git clone git@github.com:kephale/napari-tyssue.git
 pip install --no-deps -e ./napari-tyssue
+
+# ===== Setup napari-stack-processing =====
+git clone git@github.com:kephale/napari-stack-processing.git
+pip install --no-deps -e ./napari-stack-processing
+
+# More plugins (i know this could be in the yml):
+pip install git+https://github.com/morphometrics/morphometrics-engine.git
+pip install napari-stress
+pip install napari-pymeshlab
+pip install git+https://github.com/kevinyamauchi/morphometrics.git
+pip install napari-skimage-regionprops
+pip install napari-geojson
+pip install napari-plot-profile
+# deconvolution
+pip install redlionfish
+pip install btrack
+pip install git+https://github.com/lowe-lab-ucl/arboretum.git
+
+# Compatibility issues
+#pip install napari-nD-annotator# "numpy.core.multiarray failed to import"

@@ -130,3 +130,9 @@ dmypy.json
 
 # Custom for nesoi
 repos/*
+
+.DS_Store
+.asv/
+environment_files/
+*.png
+*.pickle

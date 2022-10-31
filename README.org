@@ -15,3 +15,9 @@ A personal napari distribution by Kyle Harrington
 #+RESULTS:
 : nesoi
 
+** Performance testing
+
+Comparison run this:
+
+~asv continuous main points-slice-request -b Points2DSuite~
+
