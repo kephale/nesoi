@@ -75,3 +75,5 @@ dependencies:
     - pytest
     - pytest-qt
     - pytest-cov
+    - hypothesis
+    - tensorstore
