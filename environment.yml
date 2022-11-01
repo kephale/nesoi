@@ -2,7 +2,6 @@ name: nesoi
 channels:
 - pytorch-nightly
 - conda-forge
-channel_priority: flexible  # or 'strict'
 dependencies:
 - python=3.9  
 - cmake
@@ -77,3 +76,8 @@ dependencies:
     - pytest-cov
     - hypothesis
     - tensorstore
+    - kimimaro
+    - alabaster
+    - compressed-segmentation
+    - pyspng-seunglab
+    - tabulous
