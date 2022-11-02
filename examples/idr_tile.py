@@ -8,8 +8,6 @@ from dask import delayed
 # from .omero_utils import load_numpy_array_lazy, PIXEL_TYPES
 from omero_utils import load_numpy_array_lazy, PIXEL_TYPES
 
-viewer = napari.Viewer()
-
 conn = idr.connection(host='ws://idr.openmicroscopy.org/omero-ws', user='public', password='public')
 
 # image_id = 9846151
@@ -44,6 +42,9 @@ def get_lazy_tile(x, y):
 
 print('starting to fetch')
 
+ny = int(ny / height) * height
+nx = int(nx / width) * width
+
 # 5D stack: TCZXY
 t_stacks = []
 for t in range(nt):
@@ -71,20 +72,20 @@ for t in range(nt):
 
 result = da.stack(t_stacks)
 
-value = result.sum()
-print('starting to take sum')
-value.compute()
+# Doing this will trigger fetching all tiles
+# value = result.sum()
+# print('starting to take sum')
+# value.compute()
+# print(f"sum: {value}")
 
-print(f"sum: {value}")
+viewer = napari.Viewer()
+viewer.show()
 
-# tile_a = get_lazy_tile(0, 0)
-# tile_b = get_lazy_tile(0, 1000)
+viewer.camera.center = (0.0, 51626.14114205004, 5029.208202210406)
+viewer.camera.zoom = 0.14077092440711514
+# viewer.camera.angles = (0.0, 0.0, 90.0), perspective=0.0, interactive=True)
 
-# only works with a 2D tile
-# tiles = da.from_delayed(get_tile, dtype=dtype, shape=(width, height))
-
-# stack = da.map_blocks(get_tile, dtype=dtype, meta=np.array((), dtype=dtype))
-# stack = da.map_blocks(get_tile, dtype=dtype, meta={'dtype':dtype})
+viewer.add_image(result)
 
 if __name__ == '__main__':
     napari.run()
