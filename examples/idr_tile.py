@@ -15,19 +15,6 @@ conn = idr.connection(host='ws://idr.openmicroscopy.org/omero-ws', user='public'
 # image_id = 9846151
 image_id = 9822151
 
-# napari.layers.Image._is_async = lambda x: False
-
-# data = load_numpy_array(image)
-# data, meta = load_numpy_array_lazy(image_id, conn=conn)
-
-# print('data loaded', data.shape)
-
-# print('async', napari.layers.Image._is_async(None))
-
-# viewer.add_image(data)
-
-# print('image added to viewer')
-
 # Tile tests
 
 image = conn.getObject("Image", image_id)
@@ -43,16 +30,9 @@ tile = (x, y, width, height)
 pixels = image.getPrimaryPixels()
 dtype = PIXEL_TYPES.get(pixels.getPixelsType().value, None)
 
-def exception_idx(idx):
-    print('exception_idx', idx, type(idx))
-    if idx > 1:
-        raise Exception("test exception")
-    return pixels.getPlane(*idx)
-
-#get_plane = delayed(exception_idx)
-#get_plane = delayed(lambda idx: pixels.getPlane(*idx))
-
+@delayed
 def get_tile(x,y):
+    print(f"fetching tile {x}, {y}")
     conn = idr.connection(host='ws://idr.openmicroscopy.org/omero-ws', user='public', password='public')
     image = conn.getObject("Image", image_id)
     pixels = image.getPrimaryPixels()
@@ -61,10 +41,6 @@ def get_tile(x,y):
     
 def get_lazy_tile(x, y):
     return da.from_delayed(get_tile(x, y), shape=(width, height), dtype=dtype)
-
-# TODO continue here
-# Make a dask array of the correct size
-# Fill each tile with the lazy tile source
 
 print('starting to fetch')
 
