@@ -13,6 +13,7 @@ dependencies:
 - cgal
 - python>=3.6
 - numpy
+- scyjava
 - scipy
 - matplotlib
 - pandas
@@ -37,13 +38,14 @@ dependencies:
 - pyimagej
 - pyopencl
 - reikna
-- openjdk=8
+- openjdk=11
 - jupyterlab
 - pytorch
 - torchvision
 - diffusers
 - einops
 - fire
+- maven
 - pillow
 - pip:
     - s3fs
@@ -81,3 +83,5 @@ dependencies:
     - compressed-segmentation
     - pyspng-seunglab
     - tabulous
+    - imglyb
+    - imglyb-bdv
