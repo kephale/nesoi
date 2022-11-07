@@ -85,3 +85,4 @@ dependencies:
     - tabulous
     - imglyb
     - imglyb-bdv
+    - mypy
