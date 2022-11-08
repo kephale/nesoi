@@ -1,3 +1,4 @@
+
 import h5py
 import numpy as np
 import imglyb
@@ -9,14 +10,22 @@ from jpype import JImplements, JOverride
 
 scyjava.config.add_repositories({'jitpack.io': 'https://jitpack.io'})
 
+scyjava.config.endpoints.append('net.imglib2:imglib2:5.12.0')
 scyjava.config.endpoints.append('org.scijava:ui-behaviour:2.0.7')
-scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-core:2640f84d13')
-scyjava.config.endpoints.append('sc.fiji:bigdataviewer-vistools:1.0.0-beta-32-SNAPSHOT')
+# scyjava.config.endpoints.append('sc.fiji:bigdataviewer-core:10.4.5')
+scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-core:86dc974')
+scyjava.config.endpoints.append('sc.fiji:bigdataviewer-vistools:1.0.0-beta-31')
 scyjava.start_jvm()
+
+# TODO
+# - Look at bigdataviewer to fix the issues with TiledProjector, add previous private
+# previously renderResult was not getting populated
 
 path = '/Users/kharrington/Data/CREMI/sample_A_padded_20160501.hdf'
 width = 800
 height = 600
+
+# ----- Java imports
 
 Views = scyjava.jimport('net.imglib2.view.Views')
 Intervals = scyjava.jimport('net.imglib2.util.Intervals')
@@ -38,6 +47,25 @@ PainterThread = scyjava.jimport('bdv.viewer.render.PainterThread')
 BufferedImageOverlayRenderer = scyjava.jimport('bdv.viewer.render.awt.BufferedImageOverlayRenderer')
 
 RequestRepaint = scyjava.jimport('bdv.viewer.RequestRepaint')
+
+
+VolatileProjector = scyjava.jimport('bdv.viewer.render.VolatileProjector')
+ScreenScales = scyjava.jimport('bdv.viewer.render.ScreenScales')
+
+ProjectorFactory = scyjava.jimport('bdv.viewer.render.ProjectorFactory')
+TiledProjector = scyjava.jimport('bdv.viewer.render.TiledProjector')
+Tiling = scyjava.jimport('bdv.viewer.render.Tiling')
+RenderStorage = scyjava.jimport('bdv.viewer.render.RenderStorage')
+VisibleSourcesOnScreenBounds = scyjava.jimport('bdv.viewer.render.VisibleSourcesOnScreenBounds')
+
+Callable = scyjava.jimport('java.util.concurrent.Callable')
+ForkJoinPool = scyjava.jimport('java.util.concurrent.ForkJoinPool')
+ForkJoinTask = scyjava.jimport('java.util.concurrent.ForkJoinTask')
+
+File = scyjava.jimport('java.io.File')
+ImageIO = scyjava.jimport('javax.imageio.ImageIO')
+
+# File loading
 
 file       = h5py.File(path, 'r')
 ds         = file['volumes/raw']
@@ -119,19 +147,6 @@ renderState.setCurrentTimepoint(t)
 
 # Trying to unpack renderer.paint
 
-VolatileProjector = scyjava.jimport('bdv.viewer.render.VolatileProjector')
-ScreenScales = scyjava.jimport('bdv.viewer.render.ScreenScales')
-
-ProjectorFactory = scyjava.jimport('bdv.viewer.render.ProjectorFactory')
-TiledProjector = scyjava.jimport('bdv.viewer.render.TiledProjector')
-Tiling = scyjava.jimport('bdv.viewer.render.Tiling')
-RenderStorage = scyjava.jimport('bdv.viewer.render.RenderStorage')
-VisibleSourcesOnScreenBounds = scyjava.jimport('bdv.viewer.render.VisibleSourcesOnScreenBounds')
-
-Callable = scyjava.jimport('java.util.concurrent.Callable')
-ForkJoinPool = scyjava.jimport('java.util.concurrent.ForkJoinPool')
-ForkJoinTask = scyjava.jimport('java.util.concurrent.ForkJoinTask')
-
 screenScales = ScreenScales(screen_scale_factors, target_render_nanos)
 requestedScreenScaleIndex = 0
 screenScale = screenScales.get(requestedScreenScaleIndex)
@@ -163,8 +178,8 @@ render_tiles = Tiling.splitForRendering(tiles)
 numTiles = render_tiles.size()
 tileProjectors = jpype.java.util.ArrayList()
 
-for tile in range(numTiles):
-    tile = render_tiles.get(tile)
+for tile_id in range(numTiles):
+    tile = render_tiles.get(tile_id)
     w = tile.tileSizeX()
     h = tile.tileSizeY()
     ox = tile.tileMinX()
@@ -174,7 +189,10 @@ for tile in range(numTiles):
     tile_render_storage = RenderStorage(w, h, sources.size())
 
     tile_image = Views.interval(screenImage, Intervals.createMinSize(ox, oy, w, h))
-    tileProjectors.add(tile)
+
+    tile_projector = projectorFactory.createProjector(viewerState, sources, tile_image, screenTransform, tile_render_storage)
+    
+    tileProjectors.add(tile_projector)
 
 projector = TiledProjector(tileProjectors)
 
@@ -182,44 +200,79 @@ projector = TiledProjector(tileProjectors)
 
 requestNewFrameIfIncomplete = projectorFactory.requestNewFrameIfIncomplete()
 
+# For multithreaded rendering
 # trigger rendering
 @JImplements(Callable)
 class CreateProjector:
     @JOverride
-    def call():
+    def call(self):
         projector.map(createProjector)
     
-success = executors.invoke(ForkJoinTask.adapt(CreateProjector()))
+# success = executors.invoke(ForkJoinTask.adapt(CreateProjector()))
+# currentScreenScaleIndex = requestedScreenScaleIndex
 
-currentScreenScaleIndex = requestedScreenScaleIndex
+
+# Same thread
+projector.map(True)
 
 renderResult.setUpdated()
 target.setRenderResult(renderResult)
 
+bi = renderResult.getBufferedImage()
+
+def buffered_image_to_ndarray(bi):
+    array = np.zeros((bi.getWidth(), bi.getHeight()))
+    
+    for x in range(bi.getWidth()):
+        for y in range(bi.getHeight()):
+            color = bi.getData().getDataBuffer().getElem(x + y * bi.getWidth())
+            array[x,y] = color# & 255
+
+    return array
+
+ImageIO.write(bi, "png", File("/Users/kharrington/Desktop/bdvlayer_002.png"))
+array = buffered_image_to_ndarray(bi)
+
+import napari
+
+napari.view_image(array)
+
+napari.run()
+
+
+#bi.getRGB(0, 0)
+
+# TODO
+# Convert bi.getData().getDataBuffer() to a numpy array
+# show in napari, then start a refresh loop
+
+
+# TODO resume here
+
 # scratch below
 
-bi = target.getReusableRenderResult().getBufferedImage()
+# bi = target.getReusableRenderResult().getBufferedImage()
 
 # -----
-def create_bdv():
-    return None
+# def create_bdv():
+#     return None
 
-# Make a BigDataViewer instance
-bdv = create_bdv(options)
+# # Make a BigDataViewer instance
+# bdv = create_bdv(options)
 
-def add_image(bdv, img):
-    pass
+# def add_image(bdv, img):
+#     pass
 
-# Add the image to BDV
-add_image(bdv, vimg)
+# # Add the image to BDV
+# add_image(bdv, vimg)
 
-def bdv_to_image(bdv):
-    return None
+# def bdv_to_image(bdv):
+#     return None
 
-# Get an image from BDV and show it in matplotlib
-import matplotlib.pyplot as plt
+# # Get an image from BDV and show it in matplotlib
+# import matplotlib.pyplot as plt
 
-plt.imshow(bdv_to_image(bdv))
+# plt.imshow(bdv_to_image(bdv))
 
 
 # bdv = BdvFunctions.show(vimg, 'raw')
