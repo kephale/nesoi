@@ -213,7 +213,7 @@ class CreateProjector:
 
 
 # Same thread
-projector.map(True)
+projector.map(False)
 
 renderResult.setUpdated()
 target.setRenderResult(renderResult)
