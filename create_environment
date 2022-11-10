@@ -84,3 +84,8 @@ pip install --no-deps git+https://github.com/hanjinliu/napari-spreadsheet.git
 
 # Compatibility issues
 #pip install napari-nD-annotator# "numpy.core.multiarray failed to import"
+
+# ===== midi =====
+
+# git clone https://github.com/jupyter-widgets/midicontrols
+# pip install --no-deps -e ./midicontrols

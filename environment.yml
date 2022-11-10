@@ -86,3 +86,5 @@ dependencies:
     - imglyb
     - imglyb-bdv
     - mypy
+    - asv
+#    - ipymidicontrols
