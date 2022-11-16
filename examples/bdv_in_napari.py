@@ -205,6 +205,7 @@ screenScales = ScreenScales(screen_scale_factors, target_render_nanos)
 requestedScreenScaleIndex = 0
 screenScale = screenScales.get(requestedScreenScaleIndex)
 
+# Create memory for rendering
 intervalResult = target.createRenderResult()
 renderResult = target.getReusableRenderResult()
 renderResult.init(width, height)# TODO check here
@@ -248,8 +249,6 @@ for tile_id in range(numTiles):
                                    dtype=np.dtype('b'))
     render_image_ndarray = np.zeros((num_visible_sources, render_size), dtype=np.dtype(int))
 
-    import pdb; pdb.set_trace()
-    
     render_mask_jarray = JArray.of(render_mask_ndarray)
     render_image_jarray = JArray.of(render_image_ndarray)
     
