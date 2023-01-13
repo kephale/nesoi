@@ -89,7 +89,7 @@ git clone git@github.com:seung-lab/corgie.git
 pip install --no-deps -e ./corgie
 
 # ===== Setup napari-hierarchical =====
-git clone git@github.com:BodenmillerGroup/napari-hierarchical.git
+git clone git@github.com:kephale/napari-hierarchical.git
 pip install --no-deps -e ./napari-hierarchical
 
 # ===== Setup napari-ome-zarr =====
