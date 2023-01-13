@@ -24,7 +24,7 @@ dependencies:
 - ipywidgets
 - pythreejs
 - ipyvolume
-- vispy
+#- vispy
 - meshio
 - zarr
 - xarray
@@ -47,6 +47,9 @@ dependencies:
 - fire
 - maven
 - pillow
+- openjpeg
+- imagecodecs
+- "bokeh>=2.4.2,<3"
 - pip:
     - s3fs
     - pooch
@@ -65,7 +68,7 @@ dependencies:
     - tqdm
     - scanpy
     - pyarrow
-    - imagecodecs
+#    - imagecodecs
     - squidpy
     - imageio
     - h5py
@@ -87,4 +90,7 @@ dependencies:
     - imglyb-bdv
     - mypy
     - asv
+    - fibsem_tools
+    - pyheif
+    - "ome-zarr>=0.3.0"
 #    - ipymidicontrols
