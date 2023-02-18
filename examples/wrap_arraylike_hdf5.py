@@ -15,7 +15,7 @@ scyjava.config.add_repositories({'jitpack.io': 'https://jitpack.io'})
 scyjava.config.endpoints.append('net.imglib2:imglib2:5.12.0')
 scyjava.config.endpoints.append('org.scijava:ui-behaviour:2.0.7')
 # scyjava.config.endpoints.append('sc.fiji:bigdataviewer-core:10.4.5')
-scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-core:4384d69')
+scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-core:c685fe1')
 # scyjava.config.endpoints.append('sc.fiji:bigdataviewer-vistools:1.0.0-beta-31')
 scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-vistools:5855f7d')
 

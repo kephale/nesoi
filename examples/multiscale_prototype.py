@@ -76,7 +76,7 @@ def dims_update_handler(viewer):
     bottom_right = (int(np.min((corner_pixels[1, 0], canvas_corners[1, 0]))),
                     int(np.min((corner_pixels[1, 1], canvas_corners[1, 1]))))
     
-    corners = np.array([top_left, bottom_right], dtype=int)    
+    corners = np.array([top_left, bottom_right], dtype=int)
 
     # Start a new multiscale render
     worker = animator(corners)

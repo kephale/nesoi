@@ -95,5 +95,26 @@ dependencies:
     - asv
     - fibsem_tools
     - pyheif
+    - pint
     - "ome-zarr>=0.3.0"
+    - importmagic
+    - epc
+    - ruff
+    - python-lsp-server[all]
+    - pylsp-mypy
+    - pyls-isort
+    - python-lsp-black
+    - pyls-memestra
+    - pylsp-rope
+    - python-lsp-ruff
+    - snakeviz
+    - pyaudio
+    - vedo
+    - aicsimageio
+    - napari-matplotlib
+    - "napari-process-points-and-surfaces>=0.3.0"
+    - napari-segment-blobs-and-things-with-membranes
+    - "napari-tools-menu>=0.1.15"
+    - pygeodesic
+    - "pyshtools<=4.10.0"
 #    - ipymidicontrols

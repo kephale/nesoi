@@ -64,25 +64,28 @@ layer.contrast_limits = (0, 1)
 def animator():
     for scale in reversed(range(4)):
         array = arrays[scale]
+        # This can be an oct-tree fetch
         for x in range(0, array.shape[0], chunk_size[0]):
             for y in range(0, array.shape[1], chunk_size[1]):
                 # time.sleep(0.1)
-                z = 1000
+                z = int(500 / (2 ** scale))
                 # result.data[x:(x + chunk_size[0]), y:(y + chunk_size[1]), z].compute()
                 real_array = np.asarray(array[x:(x + chunk_size[0]), y:(y + chunk_size[1]), z].compute())
-                # print('asdf', real_array.shape, [el * 2 ** scale for el in real_array.shape])
-                # print('asdfdsd', np.min(real_array), np.max(real_array))
                 upscaled = resize(real_array, [el * 2 ** scale for el in real_array.shape])
                 # Return upscaled coordinates, the scale, and chunk
                 yield (x * 2 ** scale, y * 2 ** scale, z, scale, upscaled)
-                
+
 worker = animator()
+
+# when screen is moved, start a new animator
+# disconnect old consumor and stop previous animator
+
 
 def on_yield(coord):
     x, y, z, scale, chunk = coord
     t = time.time()
     chunk_size = chunk.shape
-    print(f"Yielding at {(x, y, z)} scale = {scale} , {chunk_size}")    
+    print(f"Yielding at {(x, y, z)} scale = {scale} , {chunk_size}")
     layer.data[x:(x + chunk_size[0]), y:(y + chunk_size[1])] = chunk
     t2 = time.time()
     layer.refresh()
@@ -96,5 +99,4 @@ worker.yielded.connect(on_yield)
 
 worker.start()
 napari.run()
-
 
