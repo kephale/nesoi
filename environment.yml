@@ -3,7 +3,8 @@ channels:
 - pytorch-nightly
 - conda-forge
 dependencies:
-- python=3.9  
+# maybe use 3.9 because of pytorch on macos M1
+- python=3.10
 - cmake
 - pybind11
 - pip
@@ -117,4 +118,5 @@ dependencies:
     - "napari-tools-menu>=0.1.15"
     - pygeodesic
     - "pyshtools<=4.10.0"
+    - bpy
 #    - ipymidicontrols
