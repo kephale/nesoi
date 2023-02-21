@@ -2,17 +2,18 @@ name: nesoi
 channels:
 - pytorch-nightly
 - conda-forge
-dependencies:
-# maybe use 3.9 because of pytorch on macos M1
+dependencies:  
+# 3.9 because of pytorch, triangle, simplejpeg
 - python=3.10
-- cmake
+- "setuptools=59.5.0"
+# issue with cmake from conda on macos 13?
+#- cmake
 - pybind11
 - pip
 - boost-cpp
 - mpfr
 - gmp
 - cgal
-- python>=3.6
 - numpy
 - scyjava
 - scipy
@@ -29,7 +30,6 @@ dependencies:
 - meshio
 - zarr
 - xarray
-- ipywidgets
 - hdf5
 - mpfr
 - gmp
@@ -50,53 +50,58 @@ dependencies:
 - pillow
 - openjpeg
 - imagecodecs
-- matplotlib
 - "bokeh>=2.4.2,<3"
 - python-graphviz
 - ipycytoscape
+- fftw
+- napari-segment-blobs-and-things-with-membranes
+- s3fs
+- pooch
+- qtpy
+- superqt
+- yappi
+- ftfy
+- tqdm
+- imageio
+- pyarrow
+- squidpy
+- h5py
+- tifffile
+- nilearn
+- flake8
+- pytest
+- asv
+- pint
+- pytest-qt
+- pytest-cov
+- mypy
+- opencv
 - pip:
-    - s3fs
-    - pooch
-    - qtpy
-    - superqt
-    - yappi
-    - triangle
+# compilation error with python 3.10/clang on m1    
+#    - triangle
     - idr-py
     - album
     - omero-rois
     - imageio-ffmpeg
     - transformers
-    - ftfy
     - gradio
     - imaris-ims-file-reader
-    - tqdm
     - scanpy
     - pyarrow
 #    - imagecodecs
-    - squidpy
-    - imageio
-    - h5py
-    - tifffile
-    - nilearn
-    - flake8
     - invagination
-    - pytest
-    - pytest-qt
-    - pytest-cov
     - hypothesis
     - tensorstore
-    - kimimaro
+# introduces a simplejpeg dep that causes problems
+#    - kimimaro
     - alabaster
     - compressed-segmentation
     - pyspng-seunglab
     - tabulous
     - imglyb
     - imglyb-bdv
-    - mypy
-    - asv
     - fibsem_tools
     - pyheif
-    - pint
     - "ome-zarr>=0.3.0"
     - importmagic
     - epc
@@ -110,13 +115,15 @@ dependencies:
     - python-lsp-ruff
     - snakeviz
     - pyaudio
-    - vedo
-    - aicsimageio
-    - napari-matplotlib
-    - "napari-process-points-and-surfaces>=0.3.0"
-    - napari-segment-blobs-and-things-with-membranes
-    - "napari-tools-menu>=0.1.15"
+    - Mastodon.py
+#    - vedo
+#    - aicsimageio
+#    - napari-matplotlib
+#    - "napari-process-points-and-surfaces>=0.3.0"
+#    - "napari-tools-menu>=0.1.15"
     - pygeodesic
-    - "pyshtools<=4.10.0"
-    - bpy
+#    - 'cmake>=3.25.2'
+#    - "pyshtools<=4.10.0"
 #    - ipymidicontrols
+# requires 3.10
+#    - bpy
