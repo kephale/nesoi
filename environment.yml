@@ -76,6 +76,7 @@ dependencies:
 - pytest-cov
 - mypy
 - opencv
+- flask
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
@@ -116,6 +117,7 @@ dependencies:
     - snakeviz
     - pyaudio
     - Mastodon.py
+    - qrcode
 #    - vedo
 #    - aicsimageio
 #    - napari-matplotlib
