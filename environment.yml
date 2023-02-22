@@ -77,6 +77,9 @@ dependencies:
 - mypy
 - opencv
 - flask
+- vedo
+- vtk
+- libnetcdf
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
@@ -118,12 +121,21 @@ dependencies:
     - pyaudio
     - Mastodon.py
     - qrcode
+    - napari-process-points-and-surfaces
+    - opencv-python-headless
 #    - vedo
 #    - aicsimageio
 #    - napari-matplotlib
 #    - "napari-process-points-and-surfaces>=0.3.0"
 #    - "napari-tools-menu>=0.1.15"
     - pygeodesic
+    - skan
+    - napari-boids
+    - stardist-napari
+    - cellpose-napari
+    - stardist
+    - "tensorflow-macos;  platform_system==\"Darwin\" and platform_machine==\"arm64\""
+    - "tensorflow-metal;  platform_system==\"Darwin\" and platform_machine==\"arm64\""
 #    - 'cmake>=3.25.2'
 #    - "pyshtools<=4.10.0"
 #    - ipymidicontrols

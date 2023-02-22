@@ -95,6 +95,10 @@ pip install --no-deps -e ./corgie
 
 # ===== Setup napari-hierarchical =====
 git clone git@github.com:kephale/napari-hierarchical.git
+cd napari-hierarchical
+git remote add ppwadhwa https://github.com/ppwadhwa/napari-hierarchical/
+git fetch ppwadhwa
+git checkout ppwadhwa/update_zarr_reader
 pip install --no-deps -e ./napari-hierarchical
 
 # ===== Setup napari-ome-zarr =====
