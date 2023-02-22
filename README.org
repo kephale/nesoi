@@ -21,3 +21,24 @@ Comparison run this:
 
 ~asv continuous main points-slice-request -b Points2DSuite~
 
+** Build macos app
+
+See https://dschreij.github.io/how-to/package-anaconda-environments-as-apps to finish
+
+#+begin_src bash
+
+mkdir -p build/nesoi.app/Contents/MacOS/
+mkdir -p build/nesoi.app/Contents/Resources/
+
+cp -R ~/miniconda3/envs/nesoi/* build/nesoi.app/Contents/Resources/
+
+#+end_src
+
+#!/usr/bin/env bash
+script_dir=$(dirname "$(dirname "$0")")
+$script_dir/Resources/bin/napari
+
+#+RESULTS:
+: /Users/kharrington/git/kephale/nesoi
+
+

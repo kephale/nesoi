@@ -6,36 +6,46 @@ import scyjava
 import threading
 import time
 import jpype
-from jpype import JImplements, JOverride
+from jpype import JImplements, JOverride, JArray, JString
+
+# ----- Java dependencies
 
 scyjava.config.add_repositories({'jitpack.io': 'https://jitpack.io'})
 
 scyjava.config.endpoints.append('net.imglib2:imglib2:5.12.0')
 scyjava.config.endpoints.append('org.scijava:ui-behaviour:2.0.7')
 # scyjava.config.endpoints.append('sc.fiji:bigdataviewer-core:10.4.5')
-scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-core:86dc974')
-scyjava.config.endpoints.append('sc.fiji:bigdataviewer-vistools:1.0.0-beta-31')
+scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-core:c685fe1')
+# scyjava.config.endpoints.append('sc.fiji:bigdataviewer-vistools:1.0.0-beta-31')
+scyjava.config.endpoints.append('com.github.kephale:bigdataviewer-vistools:5855f7d')
+
 scyjava.start_jvm()
 
-# TODO
-# - Look at bigdataviewer to fix the issues with TiledProjector, add previous private
-# previously renderResult was not getting populated
-
-path = '/Users/kharrington/Data/CREMI/sample_A_padded_20160501.hdf'
-width = 800
-height = 600
+# Block until JVM is started
+while not scyjava.jvm_started():
+    time.sleep(0.02)
 
 # ----- Java imports
 
+ArrayList = scyjava.jimport('java.util.ArrayList')
+
 Views = scyjava.jimport('net.imglib2.view.Views')
+RandomAccessibleInterval = scyjava.jimport('net.imglib2.RandomAccessibleInterval')
 Intervals = scyjava.jimport('net.imglib2.util.Intervals')
+
+BigDataViewer = scyjava.jimport('bdv.BigDataViewer')
+SourceAndConverter = scyjava.jimport('bdv.viewer.SourceAndConverter')
 
 BdvFunctions        = scyjava.jimport('bdv.util.BdvFunctions')
 BdvOptions = scyjava.jimport('bdv.util.BdvOptions')
 VolatileTypeMatcher = scyjava.jimport('bdv.util.volatiles.VolatileTypeMatcher')
 VolatileViews       = scyjava.jimport('bdv.util.volatiles.VolatileViews')
 
-BdvHandleFrame   = scyjava.jimport('bdv.util.BdvHandleFrame')
+# BdvHandleFrame   = scyjava.jimport('bdv.util.BdvHandleFrame')
+BdvPythonUtils   = scyjava.jimport('bdv.util.BdvPythonUtils')
+RandomAccessibleIntervalSource   = scyjava.jimport('bdv.util.RandomAccessibleIntervalSource')
+RandomAccessibleIntervalSource4D   = scyjava.jimport('bdv.util.RandomAccessibleIntervalSource4D')
+AxisOrder   = scyjava.jimport('bdv.util.AxisOrder')
 
 BasicViewerState = scyjava.jimport('bdv.viewer.BasicViewerState')
 AffineTransform3D = scyjava.jimport('net.imglib2.realtransform.AffineTransform3D')
@@ -48,7 +58,6 @@ BufferedImageOverlayRenderer = scyjava.jimport('bdv.viewer.render.awt.BufferedIm
 
 RequestRepaint = scyjava.jimport('bdv.viewer.RequestRepaint')
 
-
 VolatileProjector = scyjava.jimport('bdv.viewer.render.VolatileProjector')
 ScreenScales = scyjava.jimport('bdv.viewer.render.ScreenScales')
 
@@ -56,6 +65,7 @@ ProjectorFactory = scyjava.jimport('bdv.viewer.render.ProjectorFactory')
 TiledProjector = scyjava.jimport('bdv.viewer.render.TiledProjector')
 Tiling = scyjava.jimport('bdv.viewer.render.Tiling')
 RenderStorage = scyjava.jimport('bdv.viewer.render.RenderStorage')
+PythonRenderStorage = scyjava.jimport('bdv.viewer.render.PythonRenderStorage')
 VisibleSourcesOnScreenBounds = scyjava.jimport('bdv.viewer.render.VisibleSourcesOnScreenBounds')
 
 Callable = scyjava.jimport('java.util.concurrent.Callable')
@@ -65,27 +75,92 @@ ForkJoinTask = scyjava.jimport('java.util.concurrent.ForkJoinTask')
 File = scyjava.jimport('java.io.File')
 ImageIO = scyjava.jimport('javax.imageio.ImageIO')
 
-# File loading
+UnsignedByteType = scyjava.jimport('net.imglib2.type.numeric.integer.UnsignedByteType')
+
+# ------ Begin the actual interesting stuff
+
+path = '/Users/kharrington/Data/CREMI/sample_A_padded_20160501.hdf'
+width = 800
+height = 600
+
+# ----- File loading
 
 file       = h5py.File(path, 'r')
 ds         = file['volumes/raw']
 block_size = (32,) * 3
 img, _     = imglyb.as_cell_img(ds, block_size, access_type='array', cache=10000)
 try:
+    # vimg is { RandomAccessibleInterval, }
     vimg   = VolatileViews.wrapAsVolatile(img)
 except Exception as e:
     print(scyjava.jstacktrace(e))
     raise e
 
-stackSource = BdvFunctions.show(vimg, 'test')
+# ----- Create ImgLib2/BDV Data structures
 
-viewer = stackSource.getBdvHandle().getViewerPanel()
-renderState = BasicViewerState(viewer.state().snapshot())
+# stackSource = BdvFunctions.show(vimg, 'test')
+# Factor out BdvFunctions.show call
 
-display = viewer.getDisplay()
+# stackSource = BdvPythonUtils.getStackSource(vimg, 'test')
+# end show()
 
-canvasW = viewer.getDisplay().getWidth()
-canvasH = viewer.getDisplay().getHeight()
+# Creating the SourceAndConverter
+
+options = BdvOptions()
+
+is_2D = True
+axisOrder = AxisOrder.getAxisOrder(options.values.axisOrder(), img, is_2D)
+
+sourceTransform = options.values.getSourceTransform()
+name = 'BDVSourceDemo'
+
+sources = ArrayList()
+converterSetups = ArrayList()
+
+_current_id = 0
+
+
+def get_unused_id():
+    global _current_id
+    _current_id += 1
+    return (_current_id - 1)
+
+
+renderState = BasicViewerState()
+
+stacks = AxisOrder.splitInputStackIntoSourceStacks(img, axisOrder)
+for stack_id in range(stacks.size()):
+    stack = stacks.get(stack_id)
+    pixel_type = UnsignedByteType()
+    if (stack.numDimensions() > 3):
+        numTimepoints = stack.max(3) + 1
+        source = RandomAccessibleIntervalSource4D((RandomAccessibleInterval) @ stack, pixel_type, sourceTransform, JString(name))
+    else:
+        source = RandomAccessibleIntervalSource(stack, pixel_type, sourceTransform, JString(name))
+    source_type = source.getType()
+    soc = BigDataViewer.wrapWithTransformedSource(
+        SourceAndConverter(source, BigDataViewer.createConverterToARGB(pixel_type)))
+    converterSetups.add(BigDataViewer.createConverterSetup(soc, get_unused_id()))
+    sources.add(soc)
+    renderState.addSource(soc)
+    # bdv_stack_source = BdvStackSource()
+
+
+
+# viewer = stackSource.getBdvHandle().getViewerPanel()
+
+
+# Python note: this viewer state is roughly equivalent to napari's Dims
+
+
+# renderState = BasicViewerState(viewer.state().snapshot())
+
+# display = viewer.getDisplay()
+
+# canvasW = viewer.getDisplay().getWidth()
+# canvasH = viewer.getDisplay().getHeight()
+canvasW = 800
+canvasH = 600
 
 affine = AffineTransform3D()
 renderState.getViewerTransform(affine)
@@ -102,40 +177,19 @@ scalebar = None
 
 target = BufferedImageOverlayRenderer()
 
-# @JImplements
-# class RequestRepainter:
-#    def getReusableRenderResult(self):
-#        pass
-
-#    def createRenderResult(self):
-#        return BufferedImageRenderResult()
-
-#    def setRenderResult(self, renderResult):
-#        pass
-
-#    def getWidth():
-       
-# 				return width;
-# 			}
-
-# 			@Override
-# 			public int getHeight()
-# 			{
-# 				return height;
-# 			}   
-
-
-
+# We just need a dummy class because we aren't painting to a UI
 @JImplements(RequestRepaint)
 class RequestRepainter:
     @JOverride
     def requestRepaint():
         pass
 
+    
 screen_scale_factors = [1.0]
 target_render_nanos = 0
 num_rendering_threads = 1
-accumulate_projector = viewer.getOptionValues().getAccumulateProjectorFactory()
+# accumulate_projector = viewer.getOptionValues().getAccumulateProjectorFactory()
+accumulate_projector = options.getAccumulateProjectorFactory()
 use_volatile_if_available = False
 
 renderer = MultiResolutionRenderer(target, RequestRepainter(), screen_scale_factors, target_render_nanos, num_rendering_threads, None, use_volatile_if_available, accumulate_projector, CacheControl.Dummy())
@@ -143,7 +197,7 @@ renderer = MultiResolutionRenderer(target, RequestRepainter(), screen_scale_fact
 t = 0
 renderState.setCurrentTimepoint(t)
 # renderer.requestRepaint()
-#renderer.paint(renderState)
+# renderer.paint(renderState)
 
 # Trying to unpack renderer.paint
 
@@ -186,7 +240,28 @@ for tile_id in range(numTiles):
     oy = tile.tileMinY()
     sources = tile.sources()
 
-    tile_render_storage = RenderStorage(w, h, sources.size())
+    # TODO finish creating the shared memory
+    render_size = w * h
+    num_visible_sources = sources.size()
+    
+    render_mask_ndarray = np.zeros((num_visible_sources, render_size),
+                                   dtype=np.dtype('b'))
+    render_image_ndarray = np.zeros((num_visible_sources, render_size), dtype=np.dtype(int))
+
+    import pdb; pdb.set_trace()
+    
+    render_mask_jarray = JArray.of(render_mask_ndarray)
+    render_image_jarray = JArray.of(render_image_ndarray)
+    
+    # render_mask_arrays = byte[ numVisibleSources ][ render_size ]
+    # render_image_arrays = int[ numVisibleSources ][ render_size ]
+    
+    # Create a nested byte array
+    # Create a nested int array
+    tile_render_storage = PythonRenderStorage(render_mask_jarray, render_image_jarray)
+    
+    # tile_render_storage = PythonRenderStorage(w, h, sources.size())
+    # tile_render_storage = RenderStorage(w, h, sources.size())
 
     tile_image = Views.interval(screenImage, Intervals.createMinSize(ox, oy, w, h))
 

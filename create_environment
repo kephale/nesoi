@@ -7,11 +7,15 @@ mamba env remove -n nesoi
 
 # Create and activate a new conda environment
 # This manages most of the dependencies
-mamba env create -f environment.yml
-source ~/miniconda3/bin/activate nesoi
+LDFLAGS="-L$(brew --prefix libheif)/lib" CFLAGS="-I$(brew --prefix libheif)/include" mamba env create -f environment.yml
+source ~/mambaforge//bin/activate nesoi
 
 mkdir -p repos
 cd repos
+
+# ===== Setup napari =====
+git clone https://github.com/vispy/vispy.git
+pip install --no-deps -e ./vispy
 
 # ===== Setup napari =====
 git clone git@github.com:kephale/napari.git
@@ -19,8 +23,17 @@ git clone git@github.com:kephale/napari.git
 # git clone https://github.com/napari/napari
 cd napari
 git remote add upstream git@github.com:napari/napari.git
+git remote add jni git@github.com:jni/napari.git
 git remote add andy-sweet git@github.com:andy-sweet/napari.git
 git remote add kephale git@github.com:kephale/napari.git
+
+git fetch upstream
+git fetch jni
+git fetch andy-sweet
+git fetch kephale
+# git checkout andy-sweet/async-integrate-alternate
+git checkout kephale/poor-mans-octree
+
 # git checkout -b async-slice-proto --track andy-sweet/async-slice-proto
 cd ..
 pip install -e ./napari
@@ -28,6 +41,10 @@ pip install -e ./napari
 # ===== Setup napari-omero =====
 git clone https://github.com/tlambert03/napari-omero.git
 pip install --no-deps -e ./napari-omero
+
+# ===== Setup napari-console =====
+git clone https://github.com/napari/napari-console.git
+pip install --no-deps -e ./napari-console
 
 # ===== Setup napari-animation =====
 git clone https://github.com/napari/napari-animation.git
@@ -64,9 +81,49 @@ pip install --no-deps -e ./napari-tyssue
 git clone git@github.com:kephale/napari-stack-processing.git
 pip install --no-deps -e ./napari-stack-processing
 
+# ===== Setup napari-bigdataviewer =====
+git clone git@github.com:kephale/napari-bigdataviewer.git
+pip install --no-deps -e ./napari-bigdataviewer
+
+# ===== Setup napari-multiscale-rendering-prototype =====
+git clone git@github.com:kephale/napari-multiscale-rendering-prototype.git
+pip install --no-deps -e ./napari-multiscale-rendering-prototype
+
 # corgie from seung lab
 git clone git@github.com:seung-lab/corgie.git
 pip install --no-deps -e ./corgie
+
+# ===== Setup napari-hierarchical =====
+git clone git@github.com:kephale/napari-hierarchical.git
+pip install --no-deps -e ./napari-hierarchical
+
+# ===== Setup napari-ome-zarr =====
+git clone https://github.com/ome/napari-ome-zarr.git
+pip install --no-deps -e ./napari-ome-zarr
+
+# ===== Setup napari-image-generators =====
+git clone git@github.com:kephale/napari-image-generators.git
+pip install --no-deps -e ./napari-image-generators
+
+# ===== Setup napari-metadata =====
+git clone git@github.com:andy-sweet/napari-metadata.git
+pip install --no-deps -e ./napari-metadata
+
+# ===== Setup napari-stl-exporter =====
+git clone https://github.com/jo-mueller/napari-stl-exporter.git
+pip install --no-deps -e ./napari-stl-exporter
+
+# ===== Setup tootapari =====
+git clone https://github.com/kephale/tootapari.git
+pip install --no-deps -e ./tootapari
+
+# ===== Setup pyvirtualcam =====
+git clone https://github.com/letmaik/pyvirtualcam --recursive
+pip install --no-deps -e ./pyvirtualcam
+
+# ===== Setup napari-qrcode =====
+git clone git@github.com:kephale/napari-qrcode.git
+pip install --no-deps -e ./napari-qrcode
 
 # More plugins (i know this could be in the yml):
 pip install --no-deps git+https://github.com/morphometrics/morphometrics-engine.git
@@ -81,6 +138,10 @@ pip install --no-deps redlionfish
 pip install --no-deps btrack
 pip install --no-deps git+https://github.com/lowe-lab-ucl/arboretum.git
 pip install --no-deps git+https://github.com/hanjinliu/napari-spreadsheet.git
+pip install --no-deps git+https://github.com/jacopoabramo/napari-live-recording
+
+
+# pip install --no-deps git+https://github.com/BodenmillerGroup/napari-hierarchical.git
 
 # Compatibility issues
 #pip install napari-nD-annotator# "numpy.core.multiarray failed to import"
