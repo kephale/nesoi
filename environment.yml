@@ -80,6 +80,7 @@ dependencies:
 - vedo
 - vtk
 - libnetcdf
+- ruff
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
