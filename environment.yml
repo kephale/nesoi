@@ -132,6 +132,7 @@ dependencies:
     - pygeodesic
     - skan
     - napari-boids
+    - napari-matplotlib
     - stardist-napari
     - cellpose-napari
     - stardist

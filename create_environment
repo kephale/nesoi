@@ -129,6 +129,15 @@ pip install --no-deps -e ./pyvirtualcam
 git clone git@github.com:kephale/napari-qrcode.git
 pip install --no-deps -e ./napari-qrcode
 
+# ===== Setup napari-graph =====
+git clone git@github.com:napari/napari-graph.git
+
+git remote add JoOkuma https://github.com/JoOkuma/napari-hierarchical/
+git fetch JoOkuma
+git checkout JoOkuma/undirected-graph
+
+pip install --no-deps -e ./napari-graph
+
 # More plugins (i know this could be in the yml):
 pip install --no-deps git+https://github.com/morphometrics/morphometrics-engine.git
 pip install --no-deps napari-stress
