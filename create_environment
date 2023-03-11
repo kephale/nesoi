@@ -26,6 +26,7 @@ git remote add upstream git@github.com:napari/napari.git
 git remote add jni git@github.com:jni/napari.git
 git remote add andy-sweet git@github.com:andy-sweet/napari.git
 git remote add kephale git@github.com:kephale/napari.git
+git remote add JoOkuma git@github.com:JoOkuma/napari.git
 
 git fetch upstream
 git fetch jni
@@ -129,12 +130,14 @@ pip install --no-deps -e ./pyvirtualcam
 git clone git@github.com:kephale/napari-qrcode.git
 pip install --no-deps -e ./napari-qrcode
 
+# ===== Setup pulser =====
+git clone git@github.com:kephale/pulser.git
+pip install --no-deps -e ./pulser
+
 # ===== Setup napari-graph =====
 git clone git@github.com:napari/napari-graph.git
 
-git remote add JoOkuma https://github.com/JoOkuma/napari-hierarchical/
-git fetch JoOkuma
-git checkout JoOkuma/undirected-graph
+git remote add JoOkuma https://github.com/JoOkuma/napari-graph/
 
 pip install --no-deps -e ./napari-graph
 

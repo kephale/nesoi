@@ -109,10 +109,10 @@ N = 10000
 width = 1000
 height = 1000
 
-edt_filename = "/Users/kharrington/Desktop/napari_edt.png"
+edt_filename = "/Users/kharrington/nesoi/resources/napari_edt.png"
 edt = iio.imread(edt_filename)
 
-colormap_filename = "/Users/kharrington/Desktop/napari_logo_binary_centeronly.png"
+colormap_filename = "/Users/kharrington/nesoi/resources/napari_logo_binary_centeronly.png"
 colormap = iio.imread(colormap_filename)
 
 mesh_file = load_data_file('orig/triceratops.obj.gz')
