@@ -15,7 +15,7 @@ dependencies:
 - gmp
 - cgal
 - numpy
-- scyjava
+- scyjava >= 1.8.1
 - scipy
 - matplotlib
 - pandas
@@ -36,7 +36,7 @@ dependencies:
 - pyvista
 - pyqt
 - omero-py
-- pyimagej
+- pyimagej >= 1.4.0
 - pyopencl
 - reikna
 - openjdk=11
@@ -81,6 +81,11 @@ dependencies:
 - vtk
 - libnetcdf
 - ruff
+- qscintilla2
+- confuse
+- jpype1 >= 1.4.1
+- labeling >= 0.1.12
+- lazy_loader
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
@@ -138,6 +143,10 @@ dependencies:
     - stardist
     - "tensorflow-macos;  platform_system==\"Darwin\" and platform_machine==\"arm64\""
     - "tensorflow-metal;  platform_system==\"Darwin\" and platform_machine==\"arm64\""
+    - pydantic-ome-ngff
+    - python-dotenv
+    - validate-pyproject[all]
+    - segment-anything
 #    - 'cmake>=3.25.2'
 #    - "pyshtools<=4.10.0"
 #    - ipymidicontrols
