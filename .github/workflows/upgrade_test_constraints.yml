@@ -1,11 +1,11 @@
 # From https://raw.githubusercontent.com/napari/napari/3db1b59191936acf9f0e5c91a9c283299c022379/.github/workflows/upgrade_test_constraints.yml
 name: Upgrade test constraints
 
-on:
-  workflow_dispatch: # Allow running on-demand
-  schedule:
-    # Runs every Monday at 8:00 UTC (4:00 Eastern)
-    - cron: '0 8 * * 1'
+# on:
+#   workflow_dispatch: # Allow running on-demand
+#   schedule:
+#     # Runs every Monday at 8:00 UTC (4:00 Eastern)
+#     - cron: '0 8 * * 1'
 
 jobs:
   upgrade:
