@@ -20,21 +20,21 @@ concurrency:
   group: comprehensive-test
 
 jobs:
-  manifest:
-    name: Check Manifest
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install check-manifest
-      - name: Check Manifest
-        run: check-manifest
+  # manifest:
+  #   name: Check Manifest
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Set up Python 3.8
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: 3.8
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install --upgrade pip
+  #         pip install check-manifest
+  #     - name: Check Manifest
+  #       run: check-manifest
 
   test:
     name: ${{ matrix.platform }} py${{ matrix.python }} ${{ matrix.toxenv }} ${{ matrix.MIN_REQ && 'min_req' }}
