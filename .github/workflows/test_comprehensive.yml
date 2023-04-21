@@ -3,18 +3,18 @@
 # See test_pull_request.yml for the tests that will be run
 name: Comprehensive Test
 
-on:
-  push:
-    branches:
-      - main
-      - "v*x"
-    tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - main
+#       - "v*x"
+#     tags:
+#       - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+#   # Allows you to run this workflow manually from the Actions tab
+#   workflow_dispatch:
 
-env:
-  COLUMNS: 120
+# env:
+#   COLUMNS: 120
 
 concurrency:
   group: comprehensive-test
