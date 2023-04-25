@@ -94,9 +94,9 @@ class MandlebrotStore(zarr.storage.Store):
         from_x, from_y, to_x, to_y = tile_bounds(level, x, y, self.levels)
         out = np.zeros(self.tilesize * self.tilesize, dtype=self.dtype)
         tile = mandelbrot(
-            out, from_x, from_y, to_x, to_y, self.tilesize, self.maxiter
-        )
-        tile = tile.reshape(self.tilesize, self.tilesize)
+                out, from_x, from_y, to_x, to_y, self.tilesize, self.maxiter
+            )
+        tile = tile.reshape(self.tilesize, self.tilesize).transpose()
 
         if self.compressor:
             return self.compressor.encode(tile)
@@ -137,7 +137,10 @@ import napari
 import numpy as np
 import toolz as tz
 from napari.experimental._progressive_loading import (
-    ChunkCacheManager, get_chunk, openorganelle_mouse_kidney_em)
+    ChunkCacheManager,
+    get_chunk,
+    openorganelle_mouse_kidney_em,
+)
 from napari.layers._data_protocols import Index, LayerDataProtocol
 from napari.qt.threading import thread_worker
 from napari.utils.events import Event
@@ -167,6 +170,7 @@ Current differences between this (2D) and are_the_chunks_in_view (3D):
 - 2D does not use chunk prioritization
 - 2D uses linear interpolation
 """
+
 
 def interpolated_get_chunk_2D(
     chunk_slice, array=None, container=None, dataset=None, cache_manager=None
@@ -319,7 +323,7 @@ class VirtualData:
     NEW: use a translate to define subregion of image
     """
 
-    def __init__(self, dtype, shape, scale_factor=(1,1)):
+    def __init__(self, dtype, shape, scale_factor=(1, 1)):
         self.dtype = dtype
         # This shape is the shape of the true data, but not our data_plane
         self.shape = shape
@@ -338,9 +342,12 @@ class VirtualData:
         self.translate = min_coord
 
         print(f"update_with_minmax: min {min_coord} max {max_coord}")
-        
+
         # Update data_plane
-        new_shape = [mx - mn for (mx, mn) in zip(max_coord, min_coord)]
+        max_coord = [mx / sf for (mx, sf) in zip(max_coord, self.scale_factor)]
+        min_coord = [mn / sf for (mn, sf) in zip(min_coord, self.scale_factor)]
+
+        new_shape = [int(mx - mn) for (mx, mn) in zip(max_coord, min_coord)]
         self.data_plane = np.zeros(new_shape, dtype=self.dtype)
 
     def _fix_key(
@@ -351,14 +358,31 @@ class VirtualData:
                 return key
             fixed_key = tuple(
                 [
-                    slice(max(0, sl.start - int(self.translate[idx] / self.scale_factor[idx])), max(0, sl.stop - int(self.translate[idx] / self.scale_factor[idx])), sl.step)
-                    for (idx, sl) in enumerate(key[-1 * self.d:])
+                    slice(
+                        max(
+                            0,
+                            sl.start
+                        ),
+                        max(
+                            0,
+                            sl.stop
+                        ),
+                        sl.step,
+                    )
+                    for (idx, sl) in enumerate(key[-1 * self.d :])
                 ]
             )
             val_shape = self.data_plane.__getitem__(fixed_key).shape
-            key_size = tuple([slice(0, min((sl.stop - sl.start), fk_val)) for sl, fk_val in zip(fixed_key, val_shape)])
+            key_size = tuple(
+                [
+                    slice(0, min((sl.stop - sl.start), fk_val))
+                    for sl, fk_val in zip(fixed_key, val_shape)
+                ]
+            )
             if fixed_key[0].stop == 0:
-                import pdb; pdb.set_trace()
+                import pdb
+
+                pdb.set_trace()
         return fixed_key, key_size
 
     def __getitem__(
@@ -378,13 +402,18 @@ class VirtualData:
         """Returns self[key]."""
         fixed_key, key_size = self._fix_key(key)
         print(f"virtualdata setitem {key} fixed to {fixed_key}")
-        if self.data_plane.__getitem__(fixed_key).shape[0] != value[key_size].shape[0]:            
-            import pdb; pdb.set_trace()
+        if (
+            self.data_plane.__getitem__(fixed_key).shape[0]
+            != value[key_size].shape[0]
+        ):
+            import pdb
+
+            pdb.set_trace()
 
             # TODO resume here to find out why there are mismatched shapes after update)with_min_max
 
         # TODO trim key_size because min_max size is based on screen and is ragged
-            
+
         return self.data_plane.__setitem__(fixed_key, value[key_size])
         # if type(key) is tuple:
         #     return self.data_plane.__setitem__(
@@ -394,7 +423,15 @@ class VirtualData:
         #     return self.data_plane.__setitem__(key, value)
 
 
-def get_and_process_chunk_2D(chunk_slice, scale, array, full_shape, cache_manager=None, dataset="", container=""):
+def get_and_process_chunk_2D(
+    chunk_slice,
+    scale,
+    array,
+    full_shape,
+    cache_manager=None,
+    dataset="",
+    container="",
+):
     """Fetch and upscale a chunk
 
     Parameters
@@ -420,9 +457,9 @@ def get_and_process_chunk_2D(chunk_slice, scale, array, full_shape, cache_manage
         dataset=dataset,
         cache_manager=cache_manager,
     )
-    
+
     # upscale_factor = [el * 2**scale for el in real_array.shape]
-    
+
     # Upscale the data to highest resolution
     # upscaled = resize(
     #     real_array,
@@ -444,23 +481,12 @@ def get_and_process_chunk_2D(chunk_slice, scale, array, full_shape, cache_manage
     LOGGER.info(
         f"yield will be placed at: {(y * 2**scale, x * 2**scale, scale, real_array.shape)} slice: {(chunk_slice[0].start, chunk_slice[0].stop, chunk_slice[0].step)} {(chunk_slice[1].start, chunk_slice[1].stop, chunk_slice[1].step)}"
     )
-    
-    upscaled_chunk_size = [0, 0]
-    upscaled_chunk_size[0] = min(
-        full_shape[-2] - y * 2**scale,
-        chunk_size[-2],
-    )
-    upscaled_chunk_size[1] = min(
-        full_shape[-1] - x * 2**scale,
-        chunk_size[-1],
-    )
 
     return (
         tuple(chunk_slice),
         scale,
         real_array,
     )
-
 
 
 @thread_worker
@@ -484,22 +510,26 @@ def render_sequence(
     # NOTE this corner_pixels means something else and should be renamed
     # it is further limited to the visible data on the vispy canvas
 
-    LOGGER.info(f"render_sequence: inside with corner pixels {corner_pixels} with max_scale {max_scale}")
+    LOGGER.info(
+        f"render_sequence: inside with corner pixels {corner_pixels} with max_scale {max_scale}"
+    )
 
     arrays = large_image["arrays"]
-    
+
     for scale in reversed(range(len(arrays))):
         # TODO hard coded usage of large_image
         if scale >= max_scale:
             array = arrays[scale]
 
-            chunks_to_fetch = list(chunks_for_scale(corner_pixels, array, scale))
-            
+            chunks_to_fetch = list(
+                chunks_for_scale(corner_pixels, array, scale)
+            )
+
             # if corner_pixels[0,0] > 0:
             #     import pdb; pdb.set_trace()
 
             # TODO pickup here, virtualdata.translate is weird, still getting (0,0) chunks
-                
+
             LOGGER.info(
                 f"render_sequence: {scale}, {array.shape} fetching {len(chunks_to_fetch)} chunks"
             )
@@ -517,9 +547,11 @@ def render_sequence(
             else:
                 raise Exception("Multithreading was removed")
 
+
 def get_layer_name_for_scale(scale):
     return f"scale_{scale}"
-        
+
+
 @tz.curry
 def dims_update_handler(invar, full_shape=(), cache_manager=None):
     """Start a new render sequence with the current viewer state
@@ -561,7 +593,7 @@ def dims_update_handler(invar, full_shape=(), cache_manager=None):
     # TODO bad layer access
     for layer in viewer.layers:
         layer.data.update_with_minmax(top_left, bottom_right)
-    
+
     # TODO Image.corner_pixels behaves oddly maybe b/c VirtualData
     if bottom_right.shape[0] > 2:
         bottom_right[0] = canvas_corners[1, 0]
@@ -572,19 +604,19 @@ def dims_update_handler(invar, full_shape=(), cache_manager=None):
 
     # TODO do a calculation to determine if we should render this scale
     # Use the scale of the layer, combine with position of camera relative to layer
-    # 
+    #
 
     # viewer.camera.zoom
     # large_image["arrays"]
 
     max_scale = large_image["scale_levels"]
-    
+
     for scale, layer in enumerate(viewer.layers):
         layer_shape = layer.data.shape
         layer_scale = layer.scale
 
         scaled_shape = [sh * sc for sh, sc in zip(layer_shape, layer_scale)]
-        
+
         # TODO this dist calculation assumes orientation
         # dist = sum([(t - c)**2 for t, c in zip(layer.translate, viewer.camera.center[1:])]) ** 0.5
 
@@ -598,8 +630,6 @@ def dims_update_handler(invar, full_shape=(), cache_manager=None):
     # Calculate pixel size for each resolution
     # If (data pixel size) < (0.5 * canvas pixel size), then skip scale
 
-    
-    
     # Start a new multiscale render
     worker = render_sequence(
         corners,
@@ -612,14 +642,14 @@ def dims_update_handler(invar, full_shape=(), cache_manager=None):
 
     # This will consume our chunks and update the numpy "canvas" and refresh
     def on_yield(coord):
-        # TODO bad layer access        
+        # TODO bad layer access
         chunk_slice, scale, chunk = coord
         layer_name = get_layer_name_for_scale(scale)
         layer = viewer.layers[layer_name]
         # chunk_size = chunk.shape
         LOGGER.info(
             f"Writing chunk with size {chunk.shape} to: {(viewer.dims.current_step[0], chunk_slice[0].start, chunk_slice[1].start)}"
-        )        
+        )
         layer.data[chunk_slice] = chunk
         layer.refresh()
 
@@ -697,32 +727,48 @@ if __name__ == "__main__":
 
     rendering_mode = "progressive_loading"
 
-    # viewer._layer_slicer._force_sync = False
+    viewer._layer_slicer._force_sync = True
 
     num_scales = len(large_image["arrays"])
-    
+
     if rendering_mode == "progressive_loading":
         # TODO at least get this size from the image
-        virtual_data = [VirtualData(np.uint16, large_image["arrays"][scale].shape, scale_factor=(2**scale, 2**scale)) for scale in range(num_scales)]
+        virtual_data = [
+            VirtualData(
+                np.uint16,
+                large_image["arrays"][scale].shape,
+                scale_factor=(2**scale, 2**scale),
+            )
+            for scale in range(num_scales)
+        ]
 
         # TODO let's choose a chunk size that matches the axis we'll be looking at
-        
-        LOGGER.info(f"canvas {[virtual_data[scale].shape for scale in range(num_scales)]} and interpolated")
+
+        LOGGER.info(
+            f"canvas {[virtual_data[scale].shape for scale in range(num_scales)]} and interpolated"
+        )
 
         # TODO duplicated
-        canvas_corners = viewer.window.qt_viewer._canvas_corners_in_world.astype(int)
+        canvas_corners = (
+            viewer.window.qt_viewer._canvas_corners_in_world.astype(int)
+        )
 
         top_left = canvas_corners[0, :]
         bottom_right = canvas_corners[1, :]
 
         for scale, vdata in enumerate(virtual_data):
             vdata.update_with_minmax(top_left, bottom_right)
-        
-            layer = viewer.add_image(vdata, contrast_limits=[0, 255], name=get_layer_name_for_scale(scale), scale=(2**scale, 2**scale))
+
+            layer = viewer.add_image(
+                vdata,
+                contrast_limits=[0, 255],
+                name=get_layer_name_for_scale(scale),
+                scale=(2**scale, 2**scale),
+            )
 
         viewer.camera.zoom = 0.001
-        canvas_corners = viewer.window.qt_viewer._canvas_corners_in_world.astype(
-            int
+        canvas_corners = (
+            viewer.window.qt_viewer._canvas_corners_in_world.astype(int)
         )
         print(f"viewer canvas corners {canvas_corners}")
 
