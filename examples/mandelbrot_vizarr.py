@@ -1,5 +1,6 @@
 import logging
 import sys
+import heapq
 from typing import Tuple, Union
 
 import dask.array as da
@@ -8,9 +9,17 @@ import numpy as np
 import toolz as tz
 import zarr
 from napari.experimental._progressive_loading import (
-    MultiScaleVirtualData, VirtualData, get_chunk, interpolated_get_chunk_2D)
+    MultiScaleVirtualData,
+    VirtualData,
+    get_chunk,
+    interpolated_get_chunk_2D,
+    chunk_centers,
+    chunk_priority_2D,
+)
 from napari.experimental._progressive_loading_datasets import (
-    mandelbrot_dataset, openorganelle_mouse_kidney_em)
+    mandelbrot_dataset,
+    openorganelle_mouse_kidney_em,
+)
 from napari.layers._data_protocols import Index, LayerDataProtocol
 from napari.qt.threading import thread_worker
 from napari.utils.events import Event
@@ -38,65 +47,11 @@ LOGGER.addHandler(streamHandler)
 global worker
 worker = None
 
-"""
-Current differences between this (2D) and are_the_chunks_in_view (3D):
-- 2D v 3D
-- 2D does not use chunk prioritization
-- 2D uses linear interpolation
-"""
-
-
-def chunks_for_scale(corner_pixels, array, scale):
-    """Return the keys for all chunks at this scale within the corner_pixels
-
-    Parameters
-    ----------
-    corner_pixels : tuple
-        ND top left and bottom right coordinates for the current view
-    array : arraylike
-        a ND numpy array with the data for this scale
-    scale : int
-        the scale level, assuming powers of 2
-
-    """
-
-    # TODO all of this needs to be generalized to ND or replaced/merged with volume rendering code
-
-    mins = corner_pixels[0, :] / (2**scale)
-    maxs = corner_pixels[1, :] / (2**scale)
-
-    chunk_size = array.chunksize
-
-    # TODO kludge for 3D z-only interpolation
-    # zval = mins[-3]
-
-    # Find the extent from the current corner pixels, limit by data shape
-    # TODO risky int cast
-    mins = (np.floor(mins / chunk_size) * chunk_size).astype(np.uint64)
-    maxs = np.min(
-        (np.ceil(maxs / chunk_size) * chunk_size, np.array(array.shape)),
-        axis=0,
-    ).astype(np.uint64)
-
-    # mins[-3] = maxs[-3] = zval
-
-    xs = range(mins[-1], maxs[-1], chunk_size[-1])
-    ys = range(mins[-2], maxs[-2], chunk_size[-2])
-    # zs = [zval]
-    # TODO kludge
-
-    for x in xs:
-        for y in ys:
-            yield (
-                slice(y, (y + chunk_size[-2])),
-                slice(x, (x + chunk_size[-1])),
-            )
-
 
 def get_and_process_chunk_2D(
     chunk_slice,
     scale,
-    array,
+    virtual_data,
     full_shape,
 ):
     """Fetch and upscale a chunk
@@ -113,28 +68,47 @@ def get_and_process_chunk_2D(
         a tuple storing the shape of the highest resolution level
 
     """
+    array = virtual_data.array
+    
     # Trigger a fetch of the data
     real_array = interpolated_get_chunk_2D(
         chunk_slice,
         array=array,
     )
 
-    # TODO imposes 2D
-    y, x = [sl.start for sl in chunk_slice]
+    # LOGGER.info(
+    #     f"\tyield will be placed at: {(y * 2**scale, x * 2**scale, scale, real_array.shape)} slice: {(chunk_slice[0].start, chunk_slice[0].stop, chunk_slice[0].step)} {(chunk_slice[1].start, chunk_slice[1].stop, chunk_slice[1].step)}"
+    # )
 
-    LOGGER.info(
-        f"\tyield will be placed at: {(y * 2**scale, x * 2**scale, scale, real_array.shape)} slice: {(chunk_slice[0].start, chunk_slice[0].stop, chunk_slice[0].step)} {(chunk_slice[1].start, chunk_slice[1].stop, chunk_slice[1].step)}"
-    )
+    # Catch slices that will be out of bounds during rendering
+    if virtual_data.translate[0] + virtual_data.data_plane.shape[0] < chunk_slice[0].stop:
+        import pdb
 
+        pdb.set_trace()
+    
     return (
         tuple(chunk_slice),
         scale,
         real_array,
     )
 
+def should_render_scale(scale, viewer):    
+    layer_name = get_layer_name_for_scale(scale)
+    layer = viewer.layers[layer_name]
+    layer_shape = layer.data.shape
+    layer_scale = layer.scale
+    
+    # TODO this dist calculation assumes orientation
+    # dist = sum([(t - c)**2 for t, c in zip(layer.translate, viewer.camera.center[1:])]) ** 0.5
+    
+    # pixel_size = 2 * np.tan(viewer.camera.angles[-1] / 2) * dist / max(layer_scale)
+    pixel_size = viewer.camera.zoom * max(layer_scale)
+    
+    # TODO random number for max pixel_size
+    return (pixel_size > 0.25) or (pixel_size > 1000000)
 
 @thread_worker
-def render_sequence(corner_pixels, num_threads=1, max_scale=1, data=None):
+def render_sequence(corner_pixels, num_threads=1, visible_scales=[], data=None):
     """A generator that yields multiscale chunk tuples from low to high resolution.
 
     Parameters
@@ -153,38 +127,35 @@ def render_sequence(corner_pixels, num_threads=1, max_scale=1, data=None):
     # it is further limited to the visible data on the vispy canvas
 
     LOGGER.info(
-        f"render_sequence: inside with corner pixels {corner_pixels} with max_scale {max_scale}"
+        f"render_sequence: inside with corner pixels {corner_pixels} with max_scale {visible_scales}"
     )
 
+    full_shape = data.arrays[0].shape
+    
     for scale in reversed(range(len(data.arrays))):
-        # TODO hard coded usage of large_image
-        if scale >= max_scale:
-            array = data.arrays[scale]
+        if visible_scales[scale]:
+            # This is the real array
+            # array = data.arrays[scale]
 
-            chunks_to_fetch = list(
-                chunks_for_scale(corner_pixels, array, scale)
-            )
+            array = data._data[scale]
 
-            # if corner_pixels[0,0] > 0:
-            #     import pdb; pdb.set_trace()
-
-            # TODO pickup here, virtualdata.translate is weird, still getting (0,0) chunks
+            chunk_map = chunk_centers(array, ndim=2)
+            chunk_keys = list(chunk_map.values())
+            chunk_queue = chunk_priority_2D(chunk_keys, corner_pixels, scale)
 
             LOGGER.info(
-                f"render_sequence: {scale}, {array.shape} fetching {len(chunks_to_fetch)} chunks"
+                f"render_sequence: {scale}, {array.shape} fetching {len(chunk_queue)} chunks"
             )
 
-            if num_threads == 1:
-                # Single threaded:
-                for chunk_slice in chunks_to_fetch:
-                    yield get_and_process_chunk_2D(
-                        chunk_slice,
-                        scale,
-                        array,
-                        data.shape,
-                    )
-            else:
-                raise Exception("Multithreading was removed")
+            # for chunk_slice in chunks_to_fetch:
+            while chunk_queue:
+                priority, chunk_slice = heapq.heappop(chunk_queue)
+                yield get_and_process_chunk_2D(
+                    chunk_slice,
+                    scale,
+                    array,
+                    full_shape,
+                )
 
 
 def get_layer_name_for_scale(scale):
@@ -215,28 +186,22 @@ def dims_update_handler(invar, data=None):
     # Terminate existing multiscale render pass
     if worker:
         # TODO this might not terminate threads properly
-        worker.quit()
+        worker.await_workers()
+        # worker.await_workers(msecs=2000)
 
-    # Find the corners of visible data in the canvas
+    # Find the corners of visible data in the highest resolution
     corner_pixels = viewer.layers[get_layer_name_for_scale(0)].corner_pixels
 
-    # Shouldn't need to use canvas_corners at all
-    # canvas_corners = viewer.window.qt_viewer._canvas_corners_in_world.astype(
-    #     np.uint64
-    # )
-
-    # Offset corner_pixels by data offset
-    # corner_pixels = np.array([corner + offset for corner, offset in zip(corner_pixels, viewer.layers[get_layer_name_for_scale(0)].data.translate)])
-    
-    top_left = np.max((corner_pixels, ), axis=0)[0, :]
-    bottom_right = np.min((corner_pixels, ), axis=0)[1, :]
+    top_left = np.max((corner_pixels,), axis=0)[0, :]
+    bottom_right = np.min((corner_pixels,), axis=0)[1, :]
 
     # TODO we could add padding around top_left and bottom_right to account for future camera movement
 
     # Interval must be nonnegative
     if not np.all(top_left < bottom_right):
-        import pdb; pdb.set_trace()
-       
+        import pdb
+
+        pdb.set_trace()
 
     # TODO Image.corner_pixels behaves oddly maybe b/c VirtualData
     # if bottom_right.shape[0] > 2:
@@ -246,10 +211,12 @@ def dims_update_handler(invar, data=None):
 
     LOGGER.info("dims_update_handler: start render_sequence")
 
-    # Find the maximum scale to render
-    max_scale = len(data.arrays) - 1
+    # Find the visible scales
+    visible_scales = [False] * len(data.arrays)
     
-    for scale, layer in enumerate(viewer.layers):
+    for scale in range(len(data.arrays)):
+        layer_name = get_layer_name_for_scale(scale)
+        layer = viewer.layers[layer_name]
         layer_shape = layer.data.shape
         layer_scale = layer.scale
 
@@ -266,18 +233,22 @@ def dims_update_handler(invar, data=None):
         # pixel_size = 2 * np.tan(viewer.camera.angles[-1] / 2) * dist / max(layer_scale)
         pixel_size = viewer.camera.zoom * max(layer_scale)
 
-        print(f"scale {scale}\twith pixel_size {pixel_size}\ttranslate {layer.data.translate}")
-        if pixel_size > 1:
-            max_scale = min(max_scale, scale)
+        LOGGER.info(
+            f"scale {scale} name {layer_name}\twith pixel_size {pixel_size}\ttranslate {layer.data.translate}"
+        )
+
+        visible_scales[scale] = should_render_scale(scale, viewer)
+
+    # TODO toggle visibility of layers
 
     # Update the MultiScaleVirtualData memory backing
-    data.set_interval(top_left, bottom_right, max_scale=max_scale)
-            
+    data.set_interval(top_left, bottom_right, visible_scales=visible_scales)
+
     # Start a new multiscale render
     worker = render_sequence(
         corners,
         data=data,
-        max_scale=max_scale,
+        visible_scales=visible_scales,
     )
 
     LOGGER.info("dims_update_handler: started render_sequence")
@@ -290,21 +261,20 @@ def dims_update_handler(invar, data=None):
         layer = viewer.layers[layer_name]
         # chunk_size = chunk.shape
         LOGGER.info(
-            f"Writing chunk with size {chunk.shape} to: {(scale, (chunk_slice[0].start, chunk_slice[0].stop), (chunk_slice[1].start, chunk_slice[1].stop))}"
+            f"Writing chunk with size {chunk.shape} to: {(scale, (chunk_slice[0].start, chunk_slice[0].stop), (chunk_slice[1].start, chunk_slice[1].stop))} in layer {scale} with shape {layer.data.shape} and dataplane shape {layer.data.data_plane.shape} sum {chunk.sum()}"
         )
         # TODO hard coded scale factor
-        if not layer.metadata["translated"]:            
-            layer.translate = np.array(layer.data.translate) * 2 ** scale
+        if not layer.metadata["translated"]:
+            layer.translate = np.array(layer.data.translate) * 2**scale
 
             # Toggle visibility of lower res layer
             if layer.metadata["prev_layer"]:
                 layer.metadata["prev_layer"].opacity = 0.5
             #     layer.metadata["prev_layer"].visible = False
-            
 
         layer.data.set_offset(chunk_slice, chunk)
-        # layer.data[chunk_slice] = chunk    
-        
+        # layer.data[chunk_slice] = chunk
+
         layer.refresh()
 
     worker.yielded.connect(on_yield)
@@ -313,12 +283,9 @@ def dims_update_handler(invar, data=None):
 
 
 def add_progressive_loading_image(img, viewer=None):
-
     multiscale_data = MultiScaleVirtualData(img)
-    
-    LOGGER.info(
-        f"MultiscaleData {multiscale_data.shape}"
-    )
+
+    LOGGER.info(f"MultiscaleData {multiscale_data.shape}")
 
     # Get initial extent for rendering
     canvas_corners = viewer.window.qt_viewer._canvas_corners_in_world.astype(
@@ -332,15 +299,14 @@ def add_progressive_loading_image(img, viewer=None):
     # TODO sketchy Disable _update_thumbnail
     def temp_update_thumbnail(self):
         self.thumbnail = np.ones((32, 32, 4))
-        
+
     napari.layers.image.Image._update_thumbnail = temp_update_thumbnail
-    
+
     # We need to initialize the extent of each VirtualData
     layers = {}
     # Start from back to start because we build a linked list
-    
-    for scale, vdata in reversed(list(enumerate(multiscale_data._data))):
 
+    for scale, vdata in reversed(list(enumerate(multiscale_data._data))):
         # TODO scale is assumed to be powers of 2
         layer = viewer.add_image(
             vdata,
@@ -351,7 +317,11 @@ def add_progressive_loading_image(img, viewer=None):
         layers[scale] = layer
         layer.metadata["translated"] = False
         # Linked list of layers
-        layer.metadata["prev_layer"] = layers[scale + 1] if scale < len(multiscale_data._data) - 1 else None
+        layer.metadata["prev_layer"] = (
+            layers[scale + 1]
+            if scale < len(multiscale_data._data) - 1
+            else None
+        )
 
     # TODO initial zoom should not be hardcoded
     viewer.camera.zoom = 0.001
