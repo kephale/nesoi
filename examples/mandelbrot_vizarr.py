@@ -104,8 +104,9 @@ def should_render_scale(scale, viewer):
     # pixel_size = 2 * np.tan(viewer.camera.angles[-1] / 2) * dist / max(layer_scale)
     pixel_size = viewer.camera.zoom * max(layer_scale)
     
-    # TODO random number for max pixel_size
-    return (pixel_size > 0.25) or (pixel_size > 1000000)
+    # TODO max pixel_size chosen by eyeballing
+    # return (pixel_size > 0.25) and (pixel_size < 5)
+    return (pixel_size >= 0.5) and (pixel_size <= 4)
 
 @thread_worker
 def render_sequence(corner_pixels, num_threads=1, visible_scales=[], data=None):
@@ -138,9 +139,13 @@ def render_sequence(corner_pixels, num_threads=1, visible_scales=[], data=None):
             # array = data.arrays[scale]
 
             array = data._data[scale]
+            chunk_keys = data._chunk_slices[scale]
 
-            chunk_map = chunk_centers(array, ndim=2)
-            chunk_keys = list(chunk_map.values())
+            LOGGER.info("render_sequence: starting chunk_centers")
+            # chunk_map = chunk_centers(array, ndim=2)
+            LOGGER.info("render_sequence: getting values")
+            # chunk_keys = list(chunk_map.values())
+            LOGGER.info("render_sequence: computing priority")
             chunk_queue = chunk_priority_2D(chunk_keys, corner_pixels, scale)
 
             LOGGER.info(
@@ -186,8 +191,8 @@ def dims_update_handler(invar, data=None):
     # Terminate existing multiscale render pass
     if worker:
         # TODO this might not terminate threads properly
-        worker.await_workers()
-        # worker.await_workers(msecs=2000)
+        # worker.await_workers()
+        worker.await_workers(msecs=5000)
 
     # Find the corners of visible data in the highest resolution
     corner_pixels = viewer.layers[get_layer_name_for_scale(0)].corner_pixels
@@ -209,7 +214,9 @@ def dims_update_handler(invar, data=None):
 
     corners = np.array([top_left, bottom_right], dtype=np.uint64)
 
-    LOGGER.info("dims_update_handler: start render_sequence")
+    corners = viewer.layers[get_layer_name_for_scale(0)].corner_pixels
+
+    LOGGER.info(f"dims_update_handler: start render_sequence {corners} on layer {get_layer_name_for_scale(0)}")
 
     # Find the visible scales
     visible_scales = [False] * len(data.arrays)
@@ -221,9 +228,12 @@ def dims_update_handler(invar, data=None):
         layer_scale = layer.scale
 
         layer.metadata["translated"] = False
+        
         # Reenable visibility of layer
-        # layer.visible = True
-        layer.opacity = 1.0
+        visible_scales[scale] = should_render_scale(scale, viewer)
+        
+        layer.visible = visible_scales[scale]
+        layer.opacity = 0.9
 
         scaled_shape = [sh * sc for sh, sc in zip(layer_shape, layer_scale)]
 
@@ -235,11 +245,11 @@ def dims_update_handler(invar, data=None):
 
         LOGGER.info(
             f"scale {scale} name {layer_name}\twith pixel_size {pixel_size}\ttranslate {layer.data.translate}"
-        )
-
-        visible_scales[scale] = should_render_scale(scale, viewer)
+        )        
 
     # TODO toggle visibility of layers
+
+    # TODO ensure that visible_scales has at least 1 visible scale
 
     # Update the MultiScaleVirtualData memory backing
     data.set_interval(top_left, bottom_right, visible_scales=visible_scales)
@@ -272,10 +282,13 @@ def dims_update_handler(invar, data=None):
                 layer.metadata["prev_layer"].opacity = 0.5
             #     layer.metadata["prev_layer"].visible = False
 
+        LOGGER.info("starting set_offset")
+        # TODO check out set_offset and refresh are blocking
         layer.data.set_offset(chunk_slice, chunk)
         # layer.data[chunk_slice] = chunk
-
-        layer.refresh()
+        LOGGER.info("done with set_offset of chunk")
+        # Refresh is too slow
+        # layer.refresh()
 
     worker.yielded.connect(on_yield)
 
@@ -306,25 +319,31 @@ def add_progressive_loading_image(img, viewer=None):
     layers = {}
     # Start from back to start because we build a linked list
 
-    for scale, vdata in reversed(list(enumerate(multiscale_data._data))):
+    for scale, vdata in list(enumerate(multiscale_data._data)):
         # TODO scale is assumed to be powers of 2
         layer = viewer.add_image(
             vdata,
             contrast_limits=[0, 255],
             name=get_layer_name_for_scale(scale),
             scale=multiscale_data._scale_factors[scale],
+            colormap='PiYG',
         )
         layers[scale] = layer
         layer.metadata["translated"] = False
-        # Linked list of layers
-        layer.metadata["prev_layer"] = (
+        
+
+    # Linked list of layers for visibility control
+    for scale in reversed(range(len(layers))):
+        layers[scale].metadata["prev_layer"] = (
             layers[scale + 1]
             if scale < len(multiscale_data._data) - 1
             else None
         )
 
     # TODO initial zoom should not be hardcoded
-    viewer.camera.zoom = 0.001
+    # for mandelbrot scales=8
+    # viewer.camera.zoom = 0.001
+    viewer.camera.zoom = 0.00001
     canvas_corners = viewer.window.qt_viewer._canvas_corners_in_world.astype(
         np.uint64
     )
@@ -347,11 +366,17 @@ if __name__ == "__main__":
     global viewer
     viewer = napari.Viewer()
 
+    def start_yappi():
+        import yappi
+
+        yappi.set_clock_type("cpu") # Use set_clock_type("wall") for wall time
+        yappi.start()
+    
     # large_image = openorganelle_mouse_kidney_em()
     large_image = mandelbrot_dataset()
 
     multiscale_img = large_image["arrays"]
-    viewer._layer_slicer._force_sync = True
+    viewer._layer_slicer._force_sync = False
 
     rendering_mode = "progressive_loading"
 
@@ -360,3 +385,12 @@ if __name__ == "__main__":
         add_progressive_loading_image(multiscale_img, viewer=viewer)
     else:
         layer = viewer.add_image(multiscale_img)
+
+    def stop_yappi():
+        yappi.stop()
+        
+        yappi.get_func_stats().print_all()
+        yappi.get_thread_stats().print_all()
+
+def yappi_stats():
+    thread_stats = yappi.get_thread_stats()
