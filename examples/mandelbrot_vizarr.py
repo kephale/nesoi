@@ -1,30 +1,21 @@
+import heapq
 import logging
 import sys
-import heapq
-from typing import Tuple, Union
 
-import dask.array as da
 import napari
 import numpy as np
 import toolz as tz
-import zarr
+
 from napari.experimental._progressive_loading import (
-    MultiScaleVirtualData,
-    VirtualData,
-    get_chunk,
-    interpolated_get_chunk_2D,
-    chunk_centers,
-    chunk_priority_2D,
-)
+    MultiScaleVirtualData, VirtualData, chunk_priority_2D, chunk_slices,
+    get_chunk)
 from napari.experimental._progressive_loading_datasets import (
-    mandelbrot_dataset,
-    openorganelle_mouse_kidney_em,
-)
-from napari.layers._data_protocols import Index, LayerDataProtocol
+    mandelbrot_dataset)
+
 from napari.qt.threading import thread_worker
 from napari.utils.events import Event
-from numba import njit
-from numcodecs import Blosc
+
+
 from psygnal import debounced
 from skimage.transform import resize
 from superqt import ensure_main_thread
@@ -48,73 +39,27 @@ global worker
 worker = None
 
 
-def get_and_process_chunk_2D(
-    chunk_slice,
-    scale,
-    virtual_data,
-    full_shape,
-):
-    """Fetch and upscale a chunk
-
-    Parameters
-    ----------
-    chunk_slice : tuple of slices
-        a key corresponding to the chunk to fetch
-    scale : int
-        scale level, assumes power of 2
-    array : arraylike
-        the ND array to fetch a chunk from
-    full_shape : tuple
-        a tuple storing the shape of the highest resolution level
-
-    """
-    array = virtual_data.array
-    
-    # Trigger a fetch of the data
-    real_array = interpolated_get_chunk_2D(
-        chunk_slice,
-        array=array,
-    )
-
-    # LOGGER.info(
-    #     f"\tyield will be placed at: {(y * 2**scale, x * 2**scale, scale, real_array.shape)} slice: {(chunk_slice[0].start, chunk_slice[0].stop, chunk_slice[0].step)} {(chunk_slice[1].start, chunk_slice[1].stop, chunk_slice[1].step)}"
-    # )
-
-    # Catch slices that will be out of bounds during rendering
-    if virtual_data.translate[0] + virtual_data.data_plane.shape[0] < chunk_slice[0].stop:
-        import pdb
-
-        pdb.set_trace()
-    
-    return (
-        tuple(chunk_slice),
-        scale,
-        real_array,
-    )
-
-def should_render_scale(scale, viewer):    
+def should_render_scale(scale, viewer):
     layer_name = get_layer_name_for_scale(scale)
     layer = viewer.layers[layer_name]
-    layer_shape = layer.data.shape
     layer_scale = layer.scale
-    
-    # TODO this dist calculation assumes orientation
-    # dist = sum([(t - c)**2 for t, c in zip(layer.translate, viewer.camera.center[1:])]) ** 0.5
-    
+
     # pixel_size = 2 * np.tan(viewer.camera.angles[-1] / 2) * dist / max(layer_scale)
     pixel_size = viewer.camera.zoom * max(layer_scale)
-    
+
     # TODO max pixel_size chosen by eyeballing
-    # return (pixel_size > 0.25) and (pixel_size < 5)
     return (pixel_size >= 0.5) and (pixel_size <= 4)
 
+
 @thread_worker
-def render_sequence(corner_pixels, num_threads=1, visible_scales=[], data=None):
+def render_sequence(
+    interval, num_threads=1, visible_scales=[], data=None
+):
     """A generator that yields multiscale chunk tuples from low to high resolution.
 
     Parameters
     ----------
-    corner_pixels : tuple
+    interval : tuple
         ND coordinates of the topleft bottomright coordinates of the
         current view
     full_shape : tuple
@@ -124,42 +69,31 @@ def render_sequence(corner_pixels, num_threads=1, visible_scales=[], data=None):
     max_scale : int
         this is used to constrain the number of scales that are rendered
     """
-    # NOTE this corner_pixels means something else and should be renamed
-    # it is further limited to the visible data on the vispy canvas
-
     LOGGER.info(
-        f"render_sequence: inside with corner pixels {corner_pixels} with max_scale {visible_scales}"
+        f"render_sequence: inside with corner pixels {interval} with max_scale {visible_scales}"
     )
 
-    full_shape = data.arrays[0].shape
-    
     for scale in reversed(range(len(data.arrays))):
         if visible_scales[scale]:
-            # This is the real array
-            # array = data.arrays[scale]
+            vdata = data._data[scale]
+            chunk_keys = chunk_slices(vdata, ndim=2)
 
-            array = data._data[scale]
-            chunk_keys = data._chunk_slices[scale]
-
-            LOGGER.info("render_sequence: starting chunk_centers")
-            # chunk_map = chunk_centers(array, ndim=2)
-            LOGGER.info("render_sequence: getting values")
-            # chunk_keys = list(chunk_map.values())
             LOGGER.info("render_sequence: computing priority")
-            chunk_queue = chunk_priority_2D(chunk_keys, corner_pixels, scale)
+            chunk_queue = chunk_priority_2D(chunk_keys, interval, scale)
 
             LOGGER.info(
-                f"render_sequence: {scale}, {array.shape} fetching {len(chunk_queue)} chunks"
+                f"render_sequence: {scale}, {vdata.shape} fetching {len(chunk_queue)} chunks"
             )
 
-            # for chunk_slice in chunks_to_fetch:
+            # Loop over all chunks in the queue and fetch the data
             while chunk_queue:
                 priority, chunk_slice = heapq.heappop(chunk_queue)
-                yield get_and_process_chunk_2D(
-                    chunk_slice,
+                real_array = get_chunk(chunk_slice, array=vdata.array)
+                yield (
+                    tuple(chunk_slice),
                     scale,
-                    array,
-                    full_shape,
+                    data._scale_factors[scale],
+                    real_array,
                 )
 
 
@@ -202,25 +136,20 @@ def dims_update_handler(invar, data=None):
 
     # TODO we could add padding around top_left and bottom_right to account for future camera movement
 
-    # Interval must be nonnegative
+    # Interval is not valid, we cannot render
     if not np.all(top_left < bottom_right):
-        import pdb
+        LOGGER.info(
+            f"dims_update_handler: interval is not valid {corner_pixels}"
+        )
+        return
 
-        pdb.set_trace()
-
-    # TODO Image.corner_pixels behaves oddly maybe b/c VirtualData
-    # if bottom_right.shape[0] > 2:
-    #     bottom_right[0] = canvas_corners[1, 0]
-
-    corners = np.array([top_left, bottom_right], dtype=np.uint64)
-
-    corners = viewer.layers[get_layer_name_for_scale(0)].corner_pixels
-
-    LOGGER.info(f"dims_update_handler: start render_sequence {corners} on layer {get_layer_name_for_scale(0)}")
+    LOGGER.info(
+        f"dims_update_handler: start render_sequence {corner_pixels} on layer {get_layer_name_for_scale(0)}"
+    )
 
     # Find the visible scales
     visible_scales = [False] * len(data.arrays)
-    
+
     for scale in range(len(data.arrays)):
         layer_name = get_layer_name_for_scale(scale)
         layer = viewer.layers[layer_name]
@@ -228,35 +157,25 @@ def dims_update_handler(invar, data=None):
         layer_scale = layer.scale
 
         layer.metadata["translated"] = False
-        
+
         # Reenable visibility of layer
         visible_scales[scale] = should_render_scale(scale, viewer)
-        
+
         layer.visible = visible_scales[scale]
         layer.opacity = 0.9
 
-        scaled_shape = [sh * sc for sh, sc in zip(layer_shape, layer_scale)]
-
-        # TODO this dist calculation assumes orientation
-        # dist = sum([(t - c)**2 for t, c in zip(layer.translate, viewer.camera.center[1:])]) ** 0.5
-
-        # pixel_size = 2 * np.tan(viewer.camera.angles[-1] / 2) * dist / max(layer_scale)
         pixel_size = viewer.camera.zoom * max(layer_scale)
 
         LOGGER.info(
             f"scale {scale} name {layer_name}\twith pixel_size {pixel_size}\ttranslate {layer.data.translate}"
-        )        
-
-    # TODO toggle visibility of layers
-
-    # TODO ensure that visible_scales has at least 1 visible scale
+        )
 
     # Update the MultiScaleVirtualData memory backing
     data.set_interval(top_left, bottom_right, visible_scales=visible_scales)
 
     # Start a new multiscale render
     worker = render_sequence(
-        corners,
+        corner_pixels,
         data=data,
         visible_scales=visible_scales,
     )
@@ -266,29 +185,27 @@ def dims_update_handler(invar, data=None):
     # This will consume our chunks and update the numpy "canvas" and refresh
     def on_yield(coord):
         # TODO bad layer access
-        chunk_slice, scale, chunk = coord
+        chunk_slice, scale, scale_factors, chunk = coord
         layer_name = get_layer_name_for_scale(scale)
         layer = viewer.layers[layer_name]
-        # chunk_size = chunk.shape
+
         LOGGER.info(
             f"Writing chunk with size {chunk.shape} to: {(scale, (chunk_slice[0].start, chunk_slice[0].stop), (chunk_slice[1].start, chunk_slice[1].stop))} in layer {scale} with shape {layer.data.shape} and dataplane shape {layer.data.data_plane.shape} sum {chunk.sum()}"
         )
         # TODO hard coded scale factor
         if not layer.metadata["translated"]:
-            layer.translate = np.array(layer.data.translate) * 2**scale
+            layer.translate = np.array(layer.data.translate) * scale_factors
 
             # Toggle visibility of lower res layer
             if layer.metadata["prev_layer"]:
                 layer.metadata["prev_layer"].opacity = 0.5
-            #     layer.metadata["prev_layer"].visible = False
+                # layer.metadata["prev_layer"].visible = False
 
         LOGGER.info("starting set_offset")
         # TODO check out set_offset and refresh are blocking
         layer.data.set_offset(chunk_slice, chunk)
-        # layer.data[chunk_slice] = chunk
+
         LOGGER.info("done with set_offset of chunk")
-        # Refresh is too slow
-        # layer.refresh()
 
     worker.yielded.connect(on_yield)
 
@@ -330,7 +247,6 @@ def add_progressive_loading_image(img, viewer=None):
         )
         layers[scale] = layer
         layer.metadata["translated"] = False
-        
 
     # Linked list of layers for visibility control
     for scale in reversed(range(len(layers))):
@@ -366,12 +282,14 @@ if __name__ == "__main__":
     global viewer
     viewer = napari.Viewer()
 
-    def start_yappi():
-        import yappi
-
-        yappi.set_clock_type("cpu") # Use set_clock_type("wall") for wall time
-        yappi.start()
+    import yappi
     
+    def start_yappi():
+        
+
+        yappi.set_clock_type("cpu")  # Use set_clock_type("wall") for wall time
+        yappi.start()
+
     # large_image = openorganelle_mouse_kidney_em()
     large_image = mandelbrot_dataset()
 
@@ -388,9 +306,10 @@ if __name__ == "__main__":
 
     def stop_yappi():
         yappi.stop()
-        
+
         yappi.get_func_stats().print_all()
         yappi.get_thread_stats().print_all()
 
-def yappi_stats():
-    thread_stats = yappi.get_thread_stats()
+
+    def yappi_stats():
+        thread_stats = yappi.get_thread_stats()

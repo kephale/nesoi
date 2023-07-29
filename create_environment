@@ -13,7 +13,11 @@ source ~/mambaforge//bin/activate nesoi
 mkdir -p repos
 cd repos
 
-# ===== Setup napari =====
+# ===== Setup zarr  =====
+git clone git@github.com:zarr-developers/zarr-python.git  || true
+pip install --no-deps -e ./zarr-python
+
+# ===== Setup vispy =====
 git clone https://github.com/vispy/vispy.git  || true
 pip install --no-deps -e ./vispy
 
@@ -145,7 +149,7 @@ pip install --no-deps -e ./napari-kleio
 
 # ===== Setup napari-graph =====
 git clone git@github.com:napari/napari-graph.git  || true
-cd napari-hierarchical
+cd napari-graph
 git remote add JoOkuma https://github.com/JoOkuma/napari-graph/
 cd ..
 pip install --no-deps -e ./napari-graph
@@ -161,6 +165,14 @@ pip install --no-deps -e ./napari-blender-bridge
 # ===== Setup napari-imagej =====
 git clone git@github.com:imagej/napari-imagej.git  || true
 pip install --no-deps -e ./napari-imagej
+
+# ===== Setup napari-workshop-browser =====
+git clone git@github.com:kephale/napari-workshop-browser.git  || true
+pip install --no-deps -e ./napari-workshop-browser
+
+# ===== Setup napari-workshop-template =====
+git clone git@github.com:kephale/napari-workshop-template.git  || true
+# pip install --no-deps -e ./napari-workshop-template
 
 # More plugins (i know this could be in the yml):
 pip install --no-deps git+https://github.com/morphometrics/morphometrics-engine.git
