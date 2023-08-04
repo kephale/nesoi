@@ -86,6 +86,7 @@ dependencies:
 - jpype1 >= 1.4.1
 - labeling >= 0.1.12
 - lazy_loader
+- lxml
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
