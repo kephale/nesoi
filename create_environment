@@ -3,12 +3,12 @@
 set -e
 
 # Remove old environment
-mamba env remove -n nesoi
+# micromamba env remove -n nesoi
 
 # Create and activate a new conda environment
 # This manages most of the dependencies
-LDFLAGS="-L$(brew --prefix libheif)/lib" CFLAGS="-I$(brew --prefix libheif)/include" mamba env create -f environment.yml
-source ~/mambaforge//bin/activate nesoi
+# LDFLAGS="-L$(brew --prefix libheif)/lib" CFLAGS="-I$(brew --prefix libheif)/include" micromamba create -n nesoi -f environment.yml
+# source ~/mambaforge//bin/activate nesoi
 
 mkdir -p repos
 cd repos
@@ -68,9 +68,9 @@ git clone git@github.com:kephale/napari-stable-diffusion.git  || true
 pip install --no-deps -e ./napari-stable-diffusion
 
 # ===== Setup tyssue =====
-jupyter nbextension install --sys-prefix --py pythreejs
-jupyter nbextension enable --sys-prefix --py pythreejs
-jupyter nbextension enable --py widgetsnbextension
+# jupyter nbextension install --sys-prefix --py pythreejs
+# jupyter nbextension enable --sys-prefix --py pythreejs
+# jupyter nbextension enable --py widgetsnbextension
 
 git clone --recursive https://github.com/DamCB/tyssue  || true
 pip install --no-deps -e ./tyssue
