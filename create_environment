@@ -13,6 +13,14 @@ set -e
 mkdir -p repos
 cd repos
 
+# ===== Setup scikit-image =====
+git clone git@github.com:kephale/scikit-image.git  || true
+# pip install --no-deps -e ./scikit-image
+
+cd scikit-image
+git remote add upstream https://github.com/scikit-image/scikit-image.git || true
+cd ..
+
 # ===== Setup zarr  =====
 git clone git@github.com:zarr-developers/zarr-python.git  || true
 pip install --no-deps -e ./zarr-python
@@ -75,8 +83,8 @@ pip install --no-deps -e ./napari-stable-diffusion
 git clone --recursive https://github.com/DamCB/tyssue  || true
 pip install --no-deps -e ./tyssue
 
-git clone https://github.com/DamCB/tyssue-demo
-git clone https://github.com/DamCB/tyssue-notebooks
+git clone https://github.com/DamCB/tyssue-demo  || true
+git clone https://github.com/DamCB/tyssue-notebooks  || true
 
 # ===== Setup napari-tyssue =====
 git clone git@github.com:kephale/napari-tyssue.git  || true
@@ -101,9 +109,9 @@ pip install --no-deps -e ./corgie
 # ===== Setup napari-hierarchical =====
 git clone git@github.com:kephale/napari-hierarchical.git  || true
 cd napari-hierarchical
-git remote add ppwadhwa https://github.com/ppwadhwa/napari-hierarchical/
-git fetch ppwadhwa
-git checkout ppwadhwa/update_zarr_reader
+git remote add ppwadhwa https://github.com/ppwadhwa/napari-hierarchical/  || true
+git fetch ppwadhwa  || true
+git checkout ppwadhwa/update_zarr_reader  || true
 cd ..
 pip install --no-deps -e ./napari-hierarchical
 
@@ -150,7 +158,7 @@ pip install --no-deps -e ./napari-kleio
 # ===== Setup napari-graph =====
 git clone git@github.com:napari/napari-graph.git  || true
 cd napari-graph
-git remote add JoOkuma https://github.com/JoOkuma/napari-graph/
+git remote add JoOkuma https://github.com/JoOkuma/napari-graph/  || true
 cd ..
 pip install --no-deps -e ./napari-graph
 
@@ -190,7 +198,7 @@ pip install --no-deps git+https://github.com/hanjinliu/napari-spreadsheet.git
 pip install --no-deps git+https://github.com/jacopoabramo/napari-live-recording.git
 pip install --no-deps git+https://github.com/JoOkuma/napari-segment-anything.git
 pip install --no-deps natari
-
+pip install --no-deps napari-accelerated-pixel-and-object-classification
 
 # pip install --no-deps git+https://github.com/BodenmillerGroup/napari-hierarchical.git
 

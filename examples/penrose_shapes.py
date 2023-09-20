@@ -91,7 +91,7 @@ class PenroseTiling:
         return polygons
 
 if __name__ == "__main__":
-    tiling = PenroseTiling(num_generations=8)
+    tiling = PenroseTiling(num_generations=9)
     polygons = tiling.drawTiles()
     print(f"Number of polygons: {len(polygons)}")
 

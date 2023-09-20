@@ -87,6 +87,11 @@ dependencies:
 - labeling >= 0.1.12
 - lazy_loader
 - lxml
+- ocl_icd_wrapper_apple
+- ninja
+- pythran
+- gql
+- boto3
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
@@ -148,6 +153,8 @@ dependencies:
     - python-dotenv
     - validate-pyproject[all]
     - segment-anything
+    - ndjson
+    - requests_toolbelt
 #    - 'cmake>=3.25.2'
 #    - "pyshtools<=4.10.0"
 #    - ipymidicontrols
