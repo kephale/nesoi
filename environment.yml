@@ -155,6 +155,14 @@ dependencies:
     - segment-anything
     - ndjson
     - requests_toolbelt
+    - PartSeg
+    - networkx
+    - btrack[napari]>=0.6.1
+    - cytosim
+    - xgboost
+    - cryoet-data-portal
+    - napari-cryoet-data-portal
+    - mrcfile
 #    - 'cmake>=3.25.2'
 #    - "pyshtools<=4.10.0"
 #    - ipymidicontrols

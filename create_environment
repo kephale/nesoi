@@ -75,6 +75,10 @@ pip install --no-deps -e ./napari-turing
 git clone git@github.com:kephale/napari-stable-diffusion.git  || true
 pip install --no-deps -e ./napari-stable-diffusion
 
+# ===== Setup epitools =====
+git clone https://github.com/epitools/epitools.git  || true
+pip install --no-deps -e ./epitools
+
 # ===== Setup tyssue =====
 # jupyter nbextension install --sys-prefix --py pythreejs
 # jupyter nbextension enable --sys-prefix --py pythreejs
@@ -108,11 +112,11 @@ pip install --no-deps -e ./corgie
 
 # ===== Setup napari-hierarchical =====
 git clone git@github.com:kephale/napari-hierarchical.git  || true
-cd napari-hierarchical
-git remote add ppwadhwa https://github.com/ppwadhwa/napari-hierarchical/  || true
-git fetch ppwadhwa  || true
-git checkout ppwadhwa/update_zarr_reader  || true
-cd ..
+# cd napari-hierarchical
+# git remote add ppwadhwa https://github.com/ppwadhwa/napari-hierarchical/  || true
+# git fetch ppwadhwa  || true
+# git checkout ppwadhwa/update_zarr_reader  || true
+# cd ..
 pip install --no-deps -e ./napari-hierarchical
 
 # ===== Setup napari-ome-zarr =====
