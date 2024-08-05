@@ -45,7 +45,8 @@ git fetch jni
 git fetch andy-sweet
 git fetch kephale
 # git checkout andy-sweet/async-integrate-alternate
-git checkout kephale/poor-mans-octree
+# git checkout kephale/poor-mans-octree
+git checkout upstream/main
 
 # git checkout -b async-slice-proto --track andy-sweet/async-slice-proto
 cd ..
@@ -103,21 +104,21 @@ git clone git@github.com:kephale/napari-bigdataviewer.git  || true
 pip install --no-deps -e ./napari-bigdataviewer
 
 # ===== Setup napari-multiscale-rendering-prototype =====
-git clone git@github.com:kephale/napari-multiscale-rendering-prototype.git  || true
-pip install --no-deps -e ./napari-multiscale-rendering-prototype
+# git clone git@github.com:kephale/napari-multiscale-rendering-prototype.git  || true
+# pip install --no-deps -e ./napari-multiscale-rendering-prototype
 
 # corgie from seung lab
 git clone git@github.com:seung-lab/corgie.git  || true
 pip install --no-deps -e ./corgie
 
 # ===== Setup napari-hierarchical =====
-git clone git@github.com:kephale/napari-hierarchical.git  || true
+# git clone git@github.com:kephale/napari-hierarchical.git  || true
 # cd napari-hierarchical
 # git remote add ppwadhwa https://github.com/ppwadhwa/napari-hierarchical/  || true
 # git fetch ppwadhwa  || true
 # git checkout ppwadhwa/update_zarr_reader  || true
 # cd ..
-pip install --no-deps -e ./napari-hierarchical
+# pip install --no-deps -e ./napari-hierarchical
 
 # ===== Setup napari-ome-zarr =====
 git clone https://github.com/ome/napari-ome-zarr.git  || true
@@ -198,7 +199,7 @@ pip install --no-deps napari-plot-profile
 pip install --no-deps redlionfish
 pip install --no-deps btrack
 pip install --no-deps git+https://github.com/lowe-lab-ucl/arboretum.git
-pip install --no-deps git+https://github.com/hanjinliu/napari-spreadsheet.git
+# pip install --no-deps git+https://github.com/hanjinliu/napari-spreadsheet.git
 pip install --no-deps git+https://github.com/jacopoabramo/napari-live-recording.git
 pip install --no-deps git+https://github.com/JoOkuma/napari-segment-anything.git
 pip install --no-deps natari
