@@ -64,6 +64,7 @@ dependencies:
 - qtpy
 - superqt
 - yappi
+- pymeshfix
 - ftfy
 - tqdm
 - imageio
@@ -96,6 +97,7 @@ dependencies:
 - gql
 - boto3
 - trimesh
+- jupytext
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
@@ -170,6 +172,10 @@ dependencies:
     - cookiecutter
     - noise
     - starfile
+    - pytest-asyncio
+    - paramiko
+    - perlin-noise
+    - myst-parser
 #    - "vtk==9.3.0"
 #    - 'cmake>=3.25.2'
 #    - "pyshtools<=4.10.0"
