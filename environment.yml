@@ -20,6 +20,7 @@ dependencies:
 - scipy
 - matplotlib
 - pandas
+- fenics
 - pytables
 - jupyter
 - notebook
@@ -98,9 +99,13 @@ dependencies:
 - boto3
 - trimesh
 - jupytext
+- ipykernel
+- scikit-learn
+- sympy
 - pip:
 # compilation error with python 3.10/clang on m1    
 #    - triangle
+    - gplearn
     - idr-py
     - album
     - omero-rois
@@ -176,6 +181,12 @@ dependencies:
     - paramiko
     - perlin-noise
     - myst-parser
+    - torch_geometric
+    - maxflow
+#    - pyg_lib
+#    - torch_scatter
+#    - torch_sparse
+#    - torch_spline_conv
 #    - "vtk==9.3.0"
 #    - 'cmake>=3.25.2'
 #    - "pyshtools<=4.10.0"
